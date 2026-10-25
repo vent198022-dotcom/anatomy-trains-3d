@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { polylineLength, lengthDelta } from '../src/muscles/length.js';
+import { polylineLength, lengthDelta, jointAngleOf } from '../src/muscles/length.js';
 import { prepareDeform, deformInto, deformChain } from '../src/muscles/deform.js';
 import { lengthState, lengthColor, deltaText, PALETTE } from '../src/muscles/colors.js';
 
@@ -55,6 +55,32 @@ test('遠端拉長：近端不動、遠端跟著走、肌腹變細', () => {
 
 test('兩端幾乎重合時變化率視為 0', () => {
   assert.equal(lengthDelta({ ...part, b: [0.1, 0, 0] }, mats(move(5, 0, 0))), 0);
+});
+
+test('關節轉角：遠端相對近端繞軸轉了多少', () => {
+  const dist = move(3, 0, 0).multiply(new THREE.Matrix4().makeRotationX(0.5));
+  assert.ok(Math.abs(jointAngleOf(move(3, 0, 0), dist, [1, 0, 0]) - 0.5) < 1e-9);
+  assert.ok(Math.abs(jointAngleOf(I, new THREE.Matrix4().makeRotationX(-0.3), [1, 0, 0]) + 0.3) < 1e-9);
+});
+
+test('跨手肘的肌肉：折線在手肘鎖住的姿勢量，再加上 −力臂 × 轉角', () => {
+  // 上臂不動，尺骨（與橈骨、手）繞 x 軸彎 1 弧度；肌肉長 20 公分、力臂 2 公分 → 短 2 公分
+  const bend = new THREE.Matrix4().makeRotationX(1);
+  const m = new Map([['arm.r', I], ['ulna.r', bend], ['radius.r', bend], ['hand.r', bend]]);
+  const p = { side: 'r', segA: 'arm.r', segB: 'ulna.r', a: [0, 10, 0], b: [0, -10, 0], vias: [], wraps: [{ prox: 'arm.r', dist: 'ulna.r', axis: [1, 0, 0], m: 2 }] };
+  assert.ok(Math.abs(lengthDelta(p, m) + 0.1) < 1e-9);
+});
+
+test('前臂旋轉：一般照直線量；有旋轉力臂的肌肉，折線連前臂旋轉也鎖住', () => {
+  const turn = new THREE.Matrix4().makeRotationY(1);
+  const m = new Map([['arm.r', I], ['ulna.r', I], ['radius.r', turn], ['hand.r', turn]]);
+  const base = { side: 'r', segA: 'arm.r', segB: 'radius.r', a: [-3, 10, 0], b: [2, -10, 0], vias: [] };
+  const L0 = Math.hypot(5, 20);
+  const straight = Math.hypot(2 * Math.cos(1) + 3, 20, 2 * Math.sin(1));
+  const elbowOnly = { ...base, wraps: [{ prox: 'arm.r', dist: 'ulna.r', axis: [1, 0, 0], m: 2 }] };
+  assert.ok(Math.abs(lengthDelta(elbowOnly, m) - (straight / L0 - 1)) < 1e-9);
+  const wrapped = { ...base, wraps: [{ prox: 'ulna.r', dist: 'radius.r', axis: [0, 1, 0], m: -1 }] };
+  assert.ok(Math.abs(lengthDelta(wrapped, m) - 1 / L0) < 1e-9);
 });
 
 test('多骨段變形：依頂點權重混合兩個骨段', () => {
