@@ -1,4 +1,4 @@
-// 肌肉長度：起點 →（轉折點）→ 止點的折線長，與中立姿勢比較
+// 肌肉長度：起點 →（轉折點，可多個）→ 止點的折線長，與中立姿勢比較
 
 // 用 THREE.Matrix4 的 elements（行優先存成列優先陣列）變換一個點
 export function transformPoint(e, p) {
@@ -10,15 +10,16 @@ export function transformPoint(e, p) {
 }
 
 export function restPath(part) {
-  return part.via ? [part.a, part.via.p, part.b] : [part.a, part.b];
+  return [part.a, ...part.vias.map(v => v.p), part.b];
 }
 
 // mats：骨段名稱 → THREE.Matrix4
 export function partPath(part, mats) {
-  const pts = [transformPoint(mats.get(part.segA).elements, part.a)];
-  if (part.via) pts.push(transformPoint(mats.get(part.via.seg).elements, part.via.p));
-  pts.push(transformPoint(mats.get(part.segB).elements, part.b));
-  return pts;
+  return [
+    transformPoint(mats.get(part.segA).elements, part.a),
+    ...part.vias.map(v => transformPoint(mats.get(v.seg).elements, v.p)),
+    transformPoint(mats.get(part.segB).elements, part.b),
+  ];
 }
 
 export function polylineLength(pts) {
@@ -27,7 +28,8 @@ export function polylineLength(pts) {
   return len;
 }
 
-// 長度變化率 Δ = L / L₀ − 1（負值＝縮短）
+// 長度變化率 Δ = L / L₀ − 1（負值＝縮短）；兩端幾乎重合（例如兩端都在骨盆內）時視為 0
 export function lengthDelta(part, mats) {
-  return polylineLength(partPath(part, mats)) / polylineLength(restPath(part)) - 1;
+  const rest = polylineLength(restPath(part));
+  return rest < 0.5 ? 0 : polylineLength(partPath(part, mats)) / rest - 1;
 }

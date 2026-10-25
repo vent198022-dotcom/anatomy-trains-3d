@@ -50,3 +50,17 @@ export function deformInto(prep, Ma, Mb, out) {
     out[v * 3 + 2] = pz;
   }
 }
+
+// 跨三個以上骨段的肌肉：每個頂點依轉檔時算好的權重（最近的兩個骨段），混合兩個骨段的變換；不做體積縮放
+// skin：每頂點 3 位元組（骨段序號 s1、s2、s2 的權重 0–255）；segKeys：序號對應的骨段名稱
+export function deformChain(rest, skin, segKeys, mats, out) {
+  const els = segKeys.map(k => mats.get(k).elements);
+  for (let v = 0, n = rest.length / 3; v < n; v++) {
+    const a = els[skin[v * 3]], b = els[skin[v * 3 + 1]];
+    const w = skin[v * 3 + 2] / 255, k = 1 - w;
+    const x = rest[v * 3], y = rest[v * 3 + 1], z = rest[v * 3 + 2];
+    out[v * 3] = k * (a[0] * x + a[4] * y + a[8] * z + a[12]) + w * (b[0] * x + b[4] * y + b[8] * z + b[12]);
+    out[v * 3 + 1] = k * (a[1] * x + a[5] * y + a[9] * z + a[13]) + w * (b[1] * x + b[5] * y + b[9] * z + b[13]);
+    out[v * 3 + 2] = k * (a[2] * x + a[6] * y + a[10] * z + a[14]) + w * (b[2] * x + b[6] * y + b[10] * z + b[14]);
+  }
+}
