@@ -5,6 +5,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 const OUT_DIR = '解剖列車網頁';
 const serve = process.argv.includes('--serve');
+const PORT = Number(process.argv.find(a => a.startsWith('--port='))?.slice(7) ?? 8124); // 預覽用的埠，可用 npm run serve -- --port=8125 改
 const options = {
   entryPoints: ['src/main.js'],
   bundle: true,
@@ -20,7 +21,7 @@ writeModelJs();
 if (serve) {
   const ctx = await esbuild.context(options);
   await ctx.watch();
-  const { port } = await ctx.serve({ servedir: OUT_DIR, port: 8124, host: '127.0.0.1' });
+  const { port } = await ctx.serve({ servedir: OUT_DIR, port: PORT, host: '127.0.0.1' });
   console.log(`預覽：http://localhost:${port}/`);
 } else {
   await esbuild.build(options);

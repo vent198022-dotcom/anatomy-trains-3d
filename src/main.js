@@ -3,9 +3,11 @@ import { createViewer } from './view/viewer.js';
 import { buildModel } from './model/scene.js';
 import { createController } from './app/controller.js';
 import { initDissectPanel } from './ui/dissectPanel.js';
+import { initMuscleList } from './ui/muscleList.js';
 import { initInfoCard } from './ui/infoCard.js';
 import { initPostureBar } from './ui/postureBar.js';
 import { initLineBar } from './ui/lineBar.js';
+import { initViewBar } from './ui/viewBar.js';
 
 const viewer = createViewer(document.getElementById('viewport'));
 const model = buildModel(window.MODEL_DATA);
@@ -13,9 +15,11 @@ viewer.scene.add(model.group);
 const ctrl = createController(viewer, model);
 
 initDissectPanel(document.getElementById('dissect'), ctrl, window.CONTENT);
+initMuscleList(document.getElementById('muscleList'), ctrl, window.CONTENT);
 initInfoCard(document.getElementById('info'), ctrl, window.CONTENT);
 initPostureBar(document.getElementById('postureBar'), ctrl, window.CONTENT);
 initLineBar(document.getElementById('lineBar'), ctrl);
+initViewBar(document.getElementById('viewBar'), viewer);
 
 // 點一下選取肌肉；拖曳旋轉不算點選
 const canvas = viewer.renderer.domElement;

@@ -1,4 +1,4 @@
-// 把 model.js 的資料建成 three.js 網格
+// 把 model.js 的資料建成 three.js 網格（骨頭、肌肉部件、痠痛點標記）
 import * as THREE from 'three';
 import { base64ToBytes, decodeMesh } from './decode.js';
 import { prepareDeform } from '../muscles/deform.js';
@@ -11,6 +11,8 @@ function makeGeometry(positions, indices) {
   geo.computeVertexNormals();
   return geo;
 }
+
+const MARKER_GEOMETRY = new THREE.SphereGeometry(0.7, 14, 10);
 
 // data：window.MODEL_DATA = { meta, bin（base64） }
 export function buildModel(data) {
@@ -27,8 +29,9 @@ export function buildModel(data) {
     return { mesh, segment: b.segment };
   });
 
+  const markers = new THREE.Group();
   const parts = meta.parts.map(info => {
-    const { positions, indices } = decodeMesh(bytes, meta.quant, info);
+    const { positions, indices, skin } = decodeMesh(bytes, meta.quant, info);
     const geo = makeGeometry(positions.slice(), indices);
     geo.getAttribute('position').setUsage(THREE.DynamicDrawUsage);
     const material = new THREE.MeshStandardMaterial({ roughness: 0.55 });
@@ -36,9 +39,27 @@ export function buildModel(data) {
     const mesh = new THREE.Mesh(geo, material);
     mesh.userData.partKey = info.key;
     group.add(mesh);
-    // delta：目前長度變化率；target：拆解時要移到的位移（每一幀平滑靠近）
-    return { info, mesh, prep: prepareDeform(positions, info.a, info.b), delta: 0, target: [0, 0, 0] };
+    // 痠痛點：記住對應的頂點，姿勢改變後跟著頂點移動；肌肉本身拆解位移時一起移
+    const tps = info.tps.map(vertex => {
+      const marker = new THREE.Mesh(MARKER_GEOMETRY, new THREE.MeshBasicMaterial());
+      marker.visible = false;
+      marker.renderOrder = 5;
+      markers.add(marker);
+      return { marker, vertex };
+    });
+    return {
+      info,
+      mesh,
+      rest: positions,
+      skin, // 跨三個以上骨段時才有
+      prep: skin ? null : prepareDeform(positions, info.a, info.b),
+      segments: info.skinSegs ?? [info.segA, info.segB, ...info.vias.map(v => v.seg)], // 只要這些骨段沒動，就不必重算
+      tps,
+      delta: 0, // 目前長度變化率
+      target: [0, 0, 0], // 拆解時要移到的位移（每一幀平滑靠近）
+    };
   });
+  group.add(markers);
 
   return { group, bones, parts, joints: meta.joints };
 }
