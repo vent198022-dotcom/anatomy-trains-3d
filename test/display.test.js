@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createDisplayState, partDisplay, partOffset, resetDisplay, restoreParts, EXPLODE_MAX, PULL_DISTANCE, LAYER_PUSH, GHOST_OPACITY } from '../src/app/display.js';
+import { createDisplayState, partDisplay, partOffset, resetDisplay, restoreParts, painMarkerState, EXPLODE_MAX, PULL_DISTANCE, LAYER_PUSH, GHOST_OPACITY } from '../src/app/display.js';
 
-const part = { key: 'pecMinor.r', id: 'pecMinor', layer: 'middle', centroid: [-6, 130, 8] };
+const part = { key: 'pecMinor.r', id: 'pecMinor', layer: 'middle', measure: true, centroid: [-6, 130, 8] };
 
 test('預設全部顯示', () => {
   assert.deepEqual(partDisplay(part, createDisplayState()), { visible: true, opacity: 1, glow: 0, pickable: true });
@@ -87,4 +87,28 @@ test('復原清掉拆解狀態，保留列車線', () => {
   assert.equal(st.explode, 0);
   assert.equal(st.selectedKey, null);
   assert.ok(st.lineParts.has('pecMinor'));
+});
+
+test('痠痛點：開關關閉時都不顯示', () => {
+  const st = createDisplayState();
+  st.selectedKey = 'pecMinor.r';
+  assert.equal(painMarkerState(part, st, true, -0.2), null);
+});
+
+test('痠痛點：姿勢改變時自動標出鎖短／鎖長的肌肉', () => {
+  const st = createDisplayState();
+  st.showPain = true;
+  assert.equal(painMarkerState(part, st, true, -0.14), 'short');
+  assert.equal(painMarkerState(part, st, true, 0.08), 'long');
+  assert.equal(painMarkerState(part, st, true, 0.01), null);
+  assert.equal(painMarkerState({ ...part, measure: false }, st, true, -0.2), null); // 筋膜不算
+});
+
+test('痠痛點：選取的肌肉一定顯示；隱藏的肌肉不顯示', () => {
+  const st = createDisplayState();
+  st.showPain = true;
+  st.selectedKey = 'pecMinor.r';
+  assert.equal(painMarkerState(part, st, false, 0), 'focus');
+  st.hidden.add('pecMinor.r');
+  assert.equal(painMarkerState(part, st, true, -0.2), null);
 });

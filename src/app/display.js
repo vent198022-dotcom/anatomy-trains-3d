@@ -1,4 +1,5 @@
-// 拆解與列車線的顯示規則（純函式，不碰 three.js）
+// 拆解、列車線與痠痛點的顯示規則（純函式，不碰 three.js）
+import { lengthState } from '../muscles/colors.js';
 
 export const LAYER_PUSH = { superficial: 1, middle: 0.6, deep: 0.3 }; // 爆炸圖時外層先離開
 export const EXPLODE_MAX = 15; // 爆炸圖滑桿拉滿時，淺層移出的距離（公分）
@@ -16,6 +17,7 @@ export function createDisplayState() {
     explode: 0, // 0–1
     selectedKey: null,
     lineParts: null, // 目前列車線的部件 id 集合；null 表示沒選線
+    showPain: false, // 痠痛點開關
   };
 }
 
@@ -55,4 +57,13 @@ export function resetDisplay(st) {
   st.pulled.clear();
   st.explode = 0;
   st.selectedKey = null;
+}
+
+// 痠痛點要不要顯示、用哪種顏色：null（不顯示）、'focus'（選取的肌肉，姿勢中立）、'short'、'long'
+// 打開開關後：選取的肌肉一定顯示；姿勢改變時，所有鎖短／鎖長的肌肉自動標出
+export function painMarkerState(part, st, poseActive, delta) {
+  if (!st.showPain || !partDisplay(part, st).visible) return null;
+  const state = poseActive && part.measure ? lengthState(delta) : 'same';
+  if (state !== 'same') return state;
+  return st.selectedKey === part.key ? 'focus' : null;
 }
