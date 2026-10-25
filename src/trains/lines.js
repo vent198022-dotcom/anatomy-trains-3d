@@ -1,4 +1,4 @@
-// 解剖列車線（2A：12 條線在軀幹、頸、下肢與肩、上臂的部分；手臂線延伸到手留到 2B）
+// 解剖列車線（12 條線；四條手臂線從軀幹一路到手）
 // stations 依線的走向排列；同一站內的部件是並行的軌道。opp() 表示這一站在對側（螺旋線、功能線會跨到另一側）。
 
 const opp = ids => ({ ids, opp: true });
@@ -56,9 +56,37 @@ export const LINES = [
       ['iliocostalisLumborum', 'longissimusThoracis'],
     ],
   },
-  { id: 'sfal', name: '淺前臂線', stations: [['pecMajorClav', 'pecMajorStern', 'pecMajorAbd', 'latissimus']] },
-  { id: 'dfal', name: '深前臂線', stations: [['pecMinor', 'clavipectoralFascia'], ['bicepsShort', 'bicepsLong', 'coracobrachialis']] },
-  { id: 'sbal', name: '淺後臂線', stations: [['trapUpper', 'trapMiddle', 'trapLower'], ['deltoidAnt', 'deltoidMid', 'deltoidPost']] },
+  {
+    id: 'sfal',
+    name: '淺前臂線',
+    stations: [
+      ['pecMajorClav', 'pecMajorStern', 'pecMajorAbd', 'latissimus'],
+      ['medialIntermuscularSeptum'],
+      ['flexorCarpiRadialis', 'palmarisLongus', 'fcuHumeral', 'fcuUlnar', 'fdsHumeroUlnar', 'fdsRadial', 'flexorDigitorumProfundus'],
+      ['flexorRetinaculum'],
+      ['palmarAponeurosis'],
+    ],
+  },
+  {
+    id: 'dfal',
+    name: '深前臂線',
+    stations: [
+      ['pecMinor', 'clavipectoralFascia'],
+      ['bicepsShort', 'bicepsLong', 'coracobrachialis'],
+      ['abductorPollicisBrevis', 'flexorPollicisBrevisSup', 'flexorPollicisBrevisDeep', 'opponensPollicis'],
+    ],
+  },
+  {
+    id: 'sbal',
+    name: '淺後臂線',
+    stations: [
+      ['trapUpper', 'trapMiddle', 'trapLower'],
+      ['deltoidAnt', 'deltoidMid', 'deltoidPost'],
+      ['lateralIntermuscularSeptum'],
+      ['extensorCarpiRadialisLongus', 'extensorCarpiRadialisBrevis', 'extensorDigitorum', 'extensorDigitiMinimi', 'ecuHumeral', 'ecuUlnar'],
+      ['extensorRetinaculum'],
+    ],
+  },
   {
     id: 'dbal',
     name: '深後臂線',
@@ -66,6 +94,7 @@ export const LINES = [
       ['rhomboidMajor', 'rhomboidMinor', 'levatorScapulae'],
       ['supraspinatus', 'infraspinatus', 'teresMinor', 'subscapularis'],
       ['tricepsLong', 'tricepsLat', 'tricepsMed'],
+      ['abductorDigitiMinimi', 'flexorDigitiMinimi', 'opponensDigitiMinimi'],
     ],
   },
   { id: 'bfl', name: '後功能線', stations: [['latissimus'], ['thoracolumbarFascia'], opp(['gluteusMaximus']), opp(['vastusLateralis'])] },
