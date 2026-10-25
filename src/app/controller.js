@@ -7,7 +7,7 @@ import { lengthDelta } from '../muscles/length.js';
 import { lengthColor, PALETTE } from '../muscles/colors.js';
 import { createDisplayState, partDisplay, partOffset, resetDisplay, restoreParts, painMarkerState } from './display.js';
 import { linePartIds } from '../trains/lines.js';
-import { buildTrack } from '../trains/track.js';
+import { createNet } from '../trains/net.js';
 
 const MARKER_COLORS = { focus: [1, 0.85, 0.2], short: [1, 0.4, 0.2], long: [0.4, 0.65, 1] };
 const MARKER_LIFT = 0.5; // 標記沿法向量浮出肌肉表面的距離（公分）
@@ -20,7 +20,7 @@ export function createController(viewer, model) {
   let params = { ...NEUTRAL };
   let mats = null;
   let activeLine = null;
-  let track = null;
+  let net = null; // 目前列車線的筋膜網
 
   const poseActive = () => !isNeutral(params);
   const emit = () => listeners.forEach(fn => fn());
@@ -55,7 +55,7 @@ export function createController(viewer, model) {
     finishTimer = setTimeout(finishPose, 120);
     applyColors();
     applyMarkers();
-    rebuildTrack();
+    updateNet();
   }
 
   function applyColors() {
@@ -83,7 +83,7 @@ export function createController(viewer, model) {
       p.target = partOffset(p.info, state, axis);
     }
     applyMarkers();
-    rebuildTrack();
+    updateNet();
   }
 
   // 痠痛點的顯示與顏色；位置在每一幀更新（跟著肌肉的拆解位移）
@@ -113,18 +113,20 @@ export function createController(viewer, model) {
     }
   }
 
-  function rebuildTrack() {
-    if (track) {
-      viewer.scene.remove(track);
-      track.traverse(o => {
-        o.geometry?.dispose();
-        o.material?.dispose();
-      });
-      track = null;
+  // 筋膜網的顏色與站間細帶跟著姿勢、拆解位移更新（外殼本身掛在肌肉底下，自動跟著變形）
+  function updateNet() {
+    net?.update(mats, p => p.target, poseActive());
+  }
+
+  function showNet(lineId) {
+    if (net) {
+      viewer.scene.remove(net.group);
+      net.dispose();
+      net = null;
     }
-    if (!activeLine) return;
-    track = buildTrack(activeLine, model.parts, mats, p => p.target, poseActive());
-    viewer.scene.add(track);
+    if (!lineId) return;
+    net = createNet(lineId, model.parts);
+    viewer.scene.add(net.group);
   }
 
   // 拆解位移每一幀平滑靠近目標（約 0.4 秒到位）；痠痛點跟著移動
@@ -200,6 +202,7 @@ export function createController(viewer, model) {
     setLine(lineId) {
       activeLine = lineId;
       state.lineParts = linePartIds(lineId);
+      showNet(lineId);
       applyDisplay();
       emit();
     },
@@ -219,6 +222,13 @@ export function createController(viewer, model) {
       finishPose(); // 確保外接球是最新的
       const candidates = model.parts.filter(p => p.pickable).map(p => p.mesh);
       return viewer.pick(x, y, candidates)?.userData.partKey ?? null;
+    },
+    // 點到的肌肉或骨頭表面位置（雙擊設旋轉中心用）
+    pointAt(x, y) {
+      finishPose();
+      const muscles = model.parts.filter(p => p.pickable).map(p => p.mesh);
+      const bones = state.layers.bones ? model.bones.map(b => b.mesh) : [];
+      return viewer.pickPoint(x, y, [...muscles, ...bones]);
     },
     onChange(fn) {
       listeners.push(fn);
