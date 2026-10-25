@@ -59,16 +59,16 @@ export function meanPoint(positions) {
 }
 
 // 距離骨頭在「最近距離 + band」以內的肌肉頂點
-export function attachmentRegion(positions, grid, band = 0.5) {
+export function attachmentRegion(positions, grid, band = 0.5, maxRadius = 6) {
   const n = positions.length / 3;
   const dist = new Float32Array(n);
   let dmin = Infinity;
   for (let v = 0; v < n; v++) {
-    const d = grid.nearest(positions[v * 3], positions[v * 3 + 1], positions[v * 3 + 2]);
+    const d = grid.nearest(positions[v * 3], positions[v * 3 + 1], positions[v * 3 + 2], maxRadius);
     dist[v] = d;
     if (d < dmin) dmin = d;
   }
-  if (!Number.isFinite(dmin)) throw new Error('肌肉離指定的骨頭超過 6 公分，請檢查 parts.js 的骨頭清單');
+  if (!Number.isFinite(dmin)) throw new Error(`肌肉離指定的骨頭超過 ${maxRadius} 公分，請檢查 parts.js 的骨頭清單`);
   const indices = [];
   for (let v = 0; v < n; v++) if (dist[v] <= dmin + band) indices.push(v);
   return { indices, dmin, centroid: centroidOf(positions, indices) };
@@ -86,8 +86,10 @@ function projT(positions, v, a, b) {
 export function refineEnds(positions, regionA, regionB, endFrac = 0.3) {
   const a = regionA.centroid, b = regionB.centroid;
   const t = v => projT(positions, v, a, b);
-  const pick = (region, nearA) =>
-    centroidOf(positions, region.indices.filter(v => (nearA ? t(v) <= endFrac : t(v) >= 1 - endFrac)));
+  const pick = (region, nearA) => {
+    const kept = region.indices.filter(v => (nearA ? t(v) <= endFrac : t(v) >= 1 - endFrac));
+    return kept.length ? centroidOf(positions, kept) : region.centroid; // 兩端重合等退化情況
+  };
   return { a: pick(regionA, true), b: pick(regionB, false) };
 }
 

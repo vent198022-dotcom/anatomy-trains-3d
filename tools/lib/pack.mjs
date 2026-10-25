@@ -1,4 +1,4 @@
-// 把多個網格量化（16 位元座標）並串成一個二進位檔
+// 把多個網格量化（16 位元座標）並串成一個二進位檔；網格可附帶 skin（Uint8Array，每頂點 3 位元組）
 
 export function packMeshes(meshes) {
   const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
@@ -34,7 +34,10 @@ export function packMeshes(meshes) {
     const idx = wide ? Uint32Array.from(m.indices) : Uint16Array.from(m.indices);
     const vOffset = push(new Uint8Array(q.buffer));
     const iOffset = push(new Uint8Array(idx.buffer));
-    entries.push({ vOffset, vCount, iOffset, iCount: idx.length, wide });
+    const entry = { vOffset, vCount, iOffset, iCount: idx.length, wide };
+    // 多骨段肌肉：每個頂點 3 位元組（兩個骨段序號＋第二骨段權重 0–255）
+    if (m.skin) entry.sOffset = push(m.skin);
+    entries.push(entry);
   }
   const bin = new Uint8Array(offset);
   let o = 0;

@@ -108,8 +108,32 @@ export function estimateJoints(geo) {
     joints.elbow[s] = extremeCentroid(humerus, [0, -1, 0], 0.03);
     joints.scapAnchor[s] = extremeCentroid(need(`Scapula.${s}`), medial, 0.05);
   }
-  joints.neck = vertebraPivot(need('Vertebra C7'), 'bottom');
-  joints.head = vertebraPivot(need('Atlas (C1)'), 'top');
+  // 脊椎各骨段的轉軸：該骨段最下方那節椎體的下緣；頭段在寰椎上緣
+  joints.pivots = {
+    L5: vertebraPivot(need('Vertebra L5'), 'bottom'),
+    L4: vertebraPivot(need('Vertebra L4'), 'bottom'),
+    L3: vertebraPivot(need('Vertebra L3'), 'bottom'),
+    L2: vertebraPivot(need('Vertebra L2'), 'bottom'),
+    L1: vertebraPivot(need('Vertebra L1'), 'bottom'),
+    thoraxLow: vertebraPivot(need('Vertebra T12'), 'bottom'),
+    thoraxMid: vertebraPivot(need('Vertebra T8'), 'bottom'),
+    thoraxUp: vertebraPivot(need('Vertebra T4'), 'bottom'),
+    neckLow: vertebraPivot(need('Vertebra C7'), 'bottom'),
+    neckUp: vertebraPivot(need('Vertebra C4'), 'bottom'),
+    head: vertebraPivot(need('Atlas (C1)'), 'top'),
+  };
+  // 髖關節：股骨頭（股骨最內上方一帶）做球面擬合
+  joints.hip = {};
+  for (const s of ['l', 'r']) {
+    const femur = need(`Femur.${s}`);
+    const dir = [s === 'r' ? 0.7071 : -0.7071, 0.7071, 0];
+    const seed = extremeCentroid(femur, dir, 0.01);
+    const head = [];
+    for (let i = 0; i < femur.length; i += 3) {
+      if (Math.hypot(femur[i] - seed[0], femur[i + 1] - seed[1], femur[i + 2] - seed[2]) < 3) head.push(femur[i], femur[i + 1], femur[i + 2]);
+    }
+    joints.hip[s] = fitSphere(Float32Array.from(head)).center;
+  }
   const ribs = RIB_NAMES.flatMap(n => ['l', 'r'].map(s => need(`${n} rib.${s}`)));
   joints.thorax = boxEllipsoid(Float32Array.from(ribs.flatMap(r => Array.from(r))));
   return joints;

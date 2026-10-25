@@ -7,7 +7,7 @@ export function base64ToBytes(text) {
   return out;
 }
 
-// entry：{ vOffset, vCount, iOffset, iCount, wide }
+// entry：{ vOffset, vCount, iOffset, iCount, wide, sOffset? }；有 sOffset 時另外回傳 skin（每頂點 3 位元組）
 export function decodeMesh(bytes, quant, entry) {
   const buf = bytes.byteOffset % 4 ? bytes.slice() : bytes; // typed array 需要對齊
   const q = new Int16Array(buf.buffer, buf.byteOffset + entry.vOffset, entry.vCount * 3);
@@ -18,5 +18,6 @@ export function decodeMesh(bytes, quant, entry) {
   }
   const Index = entry.wide ? Uint32Array : Uint16Array;
   const indices = new Index(buf.buffer, buf.byteOffset + entry.iOffset, entry.iCount).slice();
-  return { positions, indices };
+  const skin = entry.sOffset === undefined ? null : buf.slice(entry.sOffset, entry.sOffset + entry.vCount * 3);
+  return { positions, indices, skin };
 }

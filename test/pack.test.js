@@ -31,3 +31,10 @@ test('位元組沒有對齊也能解碼', () => {
   const out = decodeMesh(shifted.subarray(1), quant, entries[1]);
   assert.deepEqual(Array.from(out.indices), Array.from(b.indices));
 });
+
+test('多骨段權重（skin）一起打包、解碼', () => {
+  const skin = new Uint8Array([0, 1, 128, 2, 0, 255, 1, 1, 0]);
+  const { quant, entries, bin } = packMeshes([a, { ...a, skin }]);
+  assert.equal(decodeMesh(bin, quant, entries[0]).skin, null);
+  assert.deepEqual(Array.from(decodeMesh(bin, quant, entries[1]).skin), Array.from(skin));
+});
