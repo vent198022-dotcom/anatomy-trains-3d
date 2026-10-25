@@ -66,7 +66,7 @@ function glideScapula(joints, side, clavicle) {
   return { glide: rotateAboutQuat(ac, q), ac, anchor: target };
 }
 
-// params：{ scapProtraction, scapElevation, shoulderRotation, headForward }，各為 −1…+1
+// params：{ 'scapProtraction.l', 'scapProtraction.r', 'scapElevation.l/r', 'shoulderRotation.l/r', headForward }，各為 −1…+1
 export function computePose(joints, params = {}) {
   const p = { ...NEUTRAL, ...params };
   const mats = new Map(SEGMENT_KEYS.map(k => [k, new THREE.Matrix4()]));
@@ -78,13 +78,14 @@ export function computePose(joints, params = {}) {
 
   for (const s of ['l', 'r']) {
     const sgn = s === 'r' ? 1 : -1; // 右側在 −x，左右的轉向相反
-    const clavicle = rotateAbout(joints.sc[s], Y, sgn * LIMITS.clavProtraction * DEG * p.scapProtraction)
-      .multiply(rotateAbout(joints.sc[s], Z, -sgn * LIMITS.clavElevation * DEG * p.scapElevation));
+    const protraction = p[`scapProtraction.${s}`];
+    const clavicle = rotateAbout(joints.sc[s], Y, sgn * LIMITS.clavProtraction * DEG * protraction)
+      .multiply(rotateAbout(joints.sc[s], Z, -sgn * LIMITS.clavElevation * DEG * p[`scapElevation.${s}`]));
     const { glide, ac, anchor } = glideScapula(joints, s, clavicle);
-    const tilt = rotateAbout(ac, anchor.clone().sub(ac), sgn * LIMITS.scapTilt * DEG * p.scapProtraction);
+    const tilt = rotateAbout(ac, anchor.clone().sub(ac), sgn * LIMITS.scapTilt * DEG * protraction);
     const scapula = tilt.multiply(glide).multiply(clavicle);
     const axis = vec(joints.gh[s]).sub(vec(joints.elbow[s]));
-    const arm = scapula.clone().multiply(rotateAbout(joints.gh[s], axis, sgn * LIMITS.humeralRotation * DEG * p.shoulderRotation));
+    const arm = scapula.clone().multiply(rotateAbout(joints.gh[s], axis, sgn * LIMITS.humeralRotation * DEG * p[`shoulderRotation.${s}`]));
     mats.set(`clavicle.${s}`, clavicle);
     mats.set(`scapula.${s}`, scapula);
     mats.set(`arm.${s}`, arm);

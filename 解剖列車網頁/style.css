@@ -71,6 +71,7 @@ dd { margin: 0; }
 .sliders label { display: grid; grid-template-columns: 8.5em auto 1fr auto; align-items: center; gap: 6px; }
 .sliders small { color: var(--muted); }
 .posture-note { margin: 6px 0 0; }
+.side-label { margin-left: 12px; }
 
 @media (max-width: 900px) {
   body {
