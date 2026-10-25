@@ -1,0 +1,3 @@
+# 一律用 LF 換行：產生的 app.js、model.js 與原始檔一致，避免 Windows 取出時被改成 CRLF 而看起來有變更
+* text=auto eol=lf
+*.bin binary

@@ -1,7 +1,7 @@
 // 把 src/ 打包成 解剖列車網頁/app.js，並把 data/processed 內嵌成 model.js，讓 index.html 用 file:// 雙擊也能執行
 import * as esbuild from 'esbuild';
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 const OUT_DIR = '解剖列車網頁';
 const serve = process.argv.includes('--serve');
@@ -11,6 +11,7 @@ const options = {
   format: 'iife',
   target: 'es2020',
   minify: !serve,
+  write: !serve, // 預覽時只在記憶體裡打包，不覆寫要提交的 app.js
   outfile: `${OUT_DIR}/app.js`,
   logLevel: 'info',
 };
@@ -30,7 +31,9 @@ if (serve) {
 function writeModelJs() {
   const meta = readFileSync('data/processed/meta.json', 'utf8');
   const bin = readFileSync('data/processed/meshes.bin').toString('base64');
-  writeFileSync(`${OUT_DIR}/model.js`, `window.MODEL_DATA={meta:${meta},bin:"${bin}"};\n`);
+  const text = `window.MODEL_DATA={meta:${meta},bin:"${bin}"};\n`;
+  const path = `${OUT_DIR}/model.js`;
+  if (!existsSync(path) || readFileSync(path, 'utf8') !== text) writeFileSync(path, text); // 內容沒變就不動檔案
 }
 
 // 在 index.html 引用的檔案後面加上內容雜湊（?v=xxxx）：更新後瀏覽器不會繼續用快取的舊檔案
