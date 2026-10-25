@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fitSphere, extremeCentroid, topSlab, vertebraPivot, boxEllipsoid } from '../tools/lib/joints.mjs';
+import { fitSphere, extremeCentroid, topSlab, bottomSlab, meanOf, vertebraPivot, boxEllipsoid } from '../tools/lib/joints.mjs';
 
 test('球面擬合找回球心與半徑', () => {
   const pts = [];
@@ -21,6 +21,11 @@ test('沿某方向最遠的一批頂點', () => {
 
 test('最上方一層', () => {
   assert.deepEqual(Array.from(topSlab(new Float32Array([0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 3, 0]), 1.5)), [0, 2, 0, 0, 3, 0]);
+});
+
+test('最下方一層、平均位置', () => {
+  assert.deepEqual(Array.from(bottomSlab(new Float32Array([0, 0, 0, 0, 1, 0, 0, 2, 0, 0, 3, 0]), 1.5)), [0, 0, 0, 0, 1, 0]);
+  assert.deepEqual(meanOf(new Float32Array([0, 0, 0, 2, 4, 6])), [1, 2, 3]);
 });
 
 test('椎骨轉軸取椎體（最前方 2 公分）', () => {

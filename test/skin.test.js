@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { samplePoints, skinWeights, nearestSegment, chainVias, superficialVertex, axisT } from '../tools/lib/skin.mjs';
+import { samplePoints, skinWeights, nearestSegment, chainVias, superficialVertex, axisT, momentArm } from '../tools/lib/skin.mjs';
 
 test('取樣點數不超過上限', () => {
   const pts = new Float32Array(3000);
@@ -37,4 +37,14 @@ test('痠痛點取連線位置附近最表淺的頂點', () => {
   const bone = new Float32Array([5, 0, 0]);
   assert.equal(superficialVertex(positions, [0, 0, 0], [10, 0, 0], 0.5, bone), 1);
   assert.ok(Math.abs(axisT(positions, 1, [0, 0, 0], [10, 0, 0]) - 0.5) < 1e-9);
+});
+
+test('力臂：關節附近的肌肉在遠端轉動方向那側為正，超過上限時截斷', () => {
+  // 轉軸 +x、肢體往 −y：遠端繞 +x 正向轉時往 x × (−y) = −z 移動
+  const front = new Float32Array([0, 1, 2, 0, -1, 2]); // 關節前方（+z）2 公分
+  assert.ok(Math.abs(momentArm(front, [0, 0, 0], [0, -1, 0], [1, 0, 0], 4) + 2) < 1e-9);
+  assert.equal(momentArm(new Float32Array([0, 0, -9]), [0, 0, 0], [0, -1, 0], [1, 0, 0], 4), 4);
+  // 關節上下 2 公分內沒有頂點時，用最靠近關節面的頂點
+  const far = new Float32Array([0, -5, 1, 0, -20, 3]);
+  assert.ok(Math.abs(momentArm(far, [0, 0, 0], [0, -1, 0], [1, 0, 0], 4) + 1) < 1e-9);
 });

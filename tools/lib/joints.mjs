@@ -87,6 +87,22 @@ export function boxEllipsoid(points) {
   return { center: min.map((v, a) => (v + max[a]) / 2), radii: min.map((v, a) => (max[a] - v) / 2) };
 }
 
+// 只留 y ≤ 最低點 + depth 的頂點（例如肱骨遠端）
+export function bottomSlab(points, depth) {
+  let minY = Infinity;
+  for (let i = 1; i < points.length; i += 3) minY = Math.min(minY, points[i]);
+  const out = [];
+  for (let i = 0; i < points.length; i += 3) if (points[i + 1] <= minY + depth) out.push(points[i], points[i + 1], points[i + 2]);
+  return new Float32Array(out);
+}
+
+export function meanOf(points) {
+  const c = [0, 0, 0];
+  const n = points.length / 3;
+  for (let i = 0; i < points.length; i++) c[i % 3] += points[i] / n;
+  return c;
+}
+
 const RIB_NAMES = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth'];
 
 // geo：骨頭名稱 → 世界座標頂點（Float32Array）
@@ -96,7 +112,7 @@ export function estimateJoints(geo) {
     if (!p) throw new Error(`估算關節需要的骨頭 ${name} 不存在`);
     return p;
   };
-  const joints = { sc: {}, ac: {}, gh: {}, elbow: {}, scapAnchor: {} };
+  const joints = { sc: {}, ac: {}, gh: {}, elbow: {}, scapAnchor: {}, elbowAxis: {}, forearmAxis: {}, wrist: {} };
   for (const s of ['l', 'r']) {
     const medial = [s === 'r' ? 1 : -1, 0, 0];
     const lateral = [-medial[0], 0, 0];
@@ -107,6 +123,15 @@ export function estimateJoints(geo) {
     joints.gh[s] = fitSphere(topSlab(humerus, 3)).center;
     joints.elbow[s] = extremeCentroid(humerus, [0, -1, 0], 0.03);
     joints.scapAnchor[s] = extremeCentroid(need(`Scapula.${s}`), medial, 0.05);
+    // 手肘屈伸：通過肱骨遠端內、外上髁的連線；[內上髁, 外上髁]
+    const distalHumerus = bottomSlab(humerus, 5);
+    joints.elbowAxis[s] = [extremeCentroid(distalHumerus, medial, 0.03), extremeCentroid(distalHumerus, lateral, 0.03)];
+    // 前臂旋轉：橈骨頭 → 尺骨頭；[橈骨頭, 尺骨頭]
+    const radius = need(`Radius.${s}`), ulna = need(`Ulna.${s}`);
+    const ulnarHead = meanOf(bottomSlab(ulna, 1.5));
+    joints.forearmAxis[s] = [meanOf(topSlab(radius, 1.5)), ulnarHead];
+    // 手腕屈伸：轉動中心在頭狀骨頭部（頭狀骨最上方 1 公分的平均位置）
+    joints.wrist[s] = meanOf(topSlab(need(`Capitate bone.${s}`), 1));
   }
   // 脊椎各骨段的轉軸：該骨段最下方那節椎體的下緣；頭段在寰椎上緣
   joints.pivots = {
