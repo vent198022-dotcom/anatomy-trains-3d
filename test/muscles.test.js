@@ -54,9 +54,18 @@ test('遠端拉長：近端不動、遠端跟著走、肌腹變細', () => {
 });
 
 test('長度狀態門檻', () => {
-  assert.equal(lengthState(0.029), 'same');
+  assert.equal(lengthState(0.024), 'same');
   assert.equal(lengthState(-0.03), 'short');
   assert.equal(lengthState(0.03), 'long');
+});
+
+test('狀態與畫面上四捨五入的 % 一致（+2.6% 顯示 +3%，就算鎖長）', () => {
+  assert.equal(deltaText(0.026), '+3%');
+  assert.equal(lengthState(0.026), 'long');
+  assert.equal(deltaText(-0.025), '−3%');
+  assert.equal(lengthState(-0.025), 'short');
+  const c = lengthColor(0.026);
+  assert.ok(c[2] > PALETTE.same[2]);
 });
 
 test('顏色隨變化加深，20% 以上飽和', () => {

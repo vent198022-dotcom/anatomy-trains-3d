@@ -13,22 +13,28 @@ export const PALETTE = {
 
 export const STATE_TEXT = { short: '鎖短', long: '鎖長', same: '不變' };
 
+// 四捨五入到整數 %（正負對稱）；狀態判斷也用它，讓畫面上的數字與「不變／鎖短／鎖長」一致
+function percent(delta) {
+  return Math.sign(delta) * Math.round(Math.abs(delta) * 100);
+}
+
 export function lengthState(delta) {
-  if (delta <= -THRESHOLD) return 'short';
-  if (delta >= THRESHOLD) return 'long';
+  const pct = percent(delta);
+  if (pct <= -THRESHOLD * 100) return 'short';
+  if (pct >= THRESHOLD * 100) return 'long';
   return 'same';
 }
 
 export function lengthColor(delta) {
   const state = lengthState(delta);
   if (state === 'same') return PALETTE.same.slice();
-  const k = 0.35 + 0.65 * Math.min(1, (Math.abs(delta) - THRESHOLD) / (FULL - THRESHOLD));
+  const k = 0.35 + 0.65 * Math.min(1, Math.max(0, (Math.abs(delta) - THRESHOLD) / (FULL - THRESHOLD)));
   return PALETTE.same.map((c, i) => c + (PALETTE[state][i] - c) * k);
 }
 
 // −0.137 → '−14%'；用全形減號，與 + 號等寬好讀
 export function deltaText(delta) {
-  const pct = Math.round(delta * 100);
+  const pct = percent(delta);
   if (pct === 0) return '0%';
   return `${pct > 0 ? '+' : '−'}${Math.abs(pct)}%`;
 }
