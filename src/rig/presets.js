@@ -22,6 +22,11 @@ export function easeInOut(t) {
   return t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
 }
 
+// 滑桿值在 ±0.05 以內視為 0
+export function snapSlider(value) {
+  return Math.abs(value) < 0.05 ? 0 : value;
+}
+
 export function isNeutral(params) {
   return Object.keys(NEUTRAL).every(k => Math.abs(params[k] ?? 0) < 1e-3);
 }

@@ -12,7 +12,7 @@ const model = buildModel(window.MODEL_DATA);
 viewer.scene.add(model.group);
 const ctrl = createController(viewer, model);
 
-initDissectPanel(document.getElementById('dissect'), ctrl);
+initDissectPanel(document.getElementById('dissect'), ctrl, window.CONTENT);
 initInfoCard(document.getElementById('info'), ctrl, window.CONTENT);
 initPostureBar(document.getElementById('postureBar'), ctrl, window.CONTENT);
 initLineBar(document.getElementById('lineBar'), ctrl);

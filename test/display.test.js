@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createDisplayState, partDisplay, partOffset, resetDisplay, EXPLODE_MAX, PULL_DISTANCE, LAYER_PUSH } from '../src/app/display.js';
+import { createDisplayState, partDisplay, partOffset, resetDisplay, restoreParts, EXPLODE_MAX, PULL_DISTANCE, LAYER_PUSH, GHOST_OPACITY } from '../src/app/display.js';
 
 const part = { key: 'pecMinor.r', id: 'pecMinor', layer: 'middle', centroid: [-6, 130, 8] };
 
 test('預設全部顯示', () => {
-  assert.deepEqual(partDisplay(part, createDisplayState()), { visible: true, opacity: 1, glow: 0 });
+  assert.deepEqual(partDisplay(part, createDisplayState()), { visible: true, opacity: 1, glow: 0, pickable: true });
 });
 
 test('關掉所在的層、或單獨隱藏，就看不到', () => {
@@ -18,17 +18,43 @@ test('關掉所在的層、或單獨隱藏，就看不到', () => {
   assert.equal(partDisplay({ ...part, key: 'pecMinor.l' }, st2).visible, true);
 });
 
-test('半透明', () => {
+test('半透明只剩 10%，而且點不到（才能點到後面的深層肌肉）', () => {
   const st = createDisplayState();
   st.ghost.add('pecMinor.r');
-  assert.equal(partDisplay(part, st).opacity, 0.3);
+  const d = partDisplay(part, st);
+  assert.equal(GHOST_OPACITY, 0.1);
+  assert.equal(d.opacity, GHOST_OPACITY);
+  assert.equal(d.pickable, false);
 });
 
-test('選了列車線：線上部件發亮，其他變淡', () => {
+test('隱藏的部件點不到', () => {
+  const st = createDisplayState();
+  st.hidden.add('pecMinor.r');
+  assert.equal(partDisplay(part, st).pickable, false);
+});
+
+test('選了列車線：線上部件發亮，其他變淡且點不到', () => {
   const st = createDisplayState();
   st.lineParts = new Set(['pecMinor']);
-  assert.deepEqual(partDisplay(part, st), { visible: true, opacity: 1, glow: 0.25 });
-  assert.equal(partDisplay({ ...part, id: 'trapUpper', key: 'trapUpper.r' }, st).opacity, 0.15);
+  assert.deepEqual(partDisplay(part, st), { visible: true, opacity: 1, glow: 0.25, pickable: true });
+  const other = partDisplay({ ...part, id: 'trapUpper', key: 'trapUpper.r' }, st);
+  assert.equal(other.opacity, 0.15);
+  assert.equal(other.pickable, false);
+});
+
+test('全部恢復：清掉隱藏與半透明，其他拆解狀態不變', () => {
+  const st = createDisplayState();
+  st.hidden.add('a');
+  st.ghost.add('b');
+  st.pulled.add('c');
+  st.layers.deep = false;
+  st.explode = 0.4;
+  restoreParts(st);
+  assert.equal(st.hidden.size, 0);
+  assert.equal(st.ghost.size, 0);
+  assert.ok(st.pulled.has('c'));
+  assert.equal(st.layers.deep, false);
+  assert.equal(st.explode, 0.4);
 });
 
 test('選取的部件最亮', () => {

@@ -3,6 +3,9 @@
 export const LAYER_PUSH = { superficial: 1, middle: 0.6, deep: 0.3 }; // 爆炸圖時外層先離開
 export const EXPLODE_MAX = 15; // 爆炸圖滑桿拉滿時，淺層移出的距離（公分）
 export const PULL_DISTANCE = 8; // 「拉出」的距離（公分）
+export const GHOST_OPACITY = 0.1; // 「半透明」的不透明度
+export const LINE_FADE_OPACITY = 0.15; // 選了列車線時，線外部件的不透明度
+const PICK_MIN_OPACITY = 0.3; // 比這更透明的部件點不到，點選會穿過去選到後面的肌肉
 
 export function createDisplayState() {
   return {
@@ -16,17 +19,17 @@ export function createDisplayState() {
   };
 }
 
-// part：{ key, id, layer }；回傳 { visible, opacity, glow }
+// part：{ key, id, layer }；回傳 { visible, opacity, glow, pickable }
 export function partDisplay(part, st) {
-  if (!st.layers[part.layer] || st.hidden.has(part.key)) return { visible: false, opacity: 0, glow: 0 };
-  let opacity = st.ghost.has(part.key) ? 0.3 : 1;
+  if (!st.layers[part.layer] || st.hidden.has(part.key)) return { visible: false, opacity: 0, glow: 0, pickable: false };
+  let opacity = st.ghost.has(part.key) ? GHOST_OPACITY : 1;
   let glow = 0;
   if (st.lineParts) {
     if (st.lineParts.has(part.id)) glow = 0.25;
-    else opacity = Math.min(opacity, 0.15);
+    else opacity = Math.min(opacity, LINE_FADE_OPACITY);
   }
   if (st.selectedKey === part.key) glow = 0.45;
-  return { visible: true, opacity, glow };
+  return { visible: true, opacity, glow, pickable: opacity >= PICK_MIN_OPACITY };
 }
 
 // 爆炸圖與拉出的位移：從身體中軸（axis = [x, z]）沿水平方向往外
@@ -36,6 +39,12 @@ export function partOffset(part, st, axis) {
   const len = Math.hypot(dx, dz) || 1;
   const dist = st.explode * EXPLODE_MAX * LAYER_PUSH[part.layer] + (st.pulled.has(part.key) ? PULL_DISTANCE : 0);
   return [(dx / len) * dist, 0, (dz / len) * dist];
+}
+
+// 全部恢復：只把隱藏、半透明的部件顯示回來；分層、爆炸圖、拉出不變
+export function restoreParts(st) {
+  st.hidden.clear();
+  st.ghost.clear();
 }
 
 // 復原：清掉拆解狀態與選取；姿勢與列車線不變

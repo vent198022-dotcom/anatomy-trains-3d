@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NEUTRAL, PRESETS, SLIDERS, lerpParams, easeInOut, isNeutral } from '../src/rig/presets.js';
+import { NEUTRAL, PRESETS, SLIDERS, lerpParams, easeInOut, isNeutral, snapSlider } from '../src/rig/presets.js';
 
 test('預設姿勢與滑桿都用同一組參數名稱', () => {
   const keys = Object.keys(NEUTRAL).sort();
@@ -23,4 +23,11 @@ test('緩動曲線端點與中點', () => {
 test('是否為中立姿勢', () => {
   assert.equal(isNeutral(NEUTRAL), true);
   assert.equal(isNeutral(PRESETS.roundedShoulders.params), false);
+});
+
+test('滑桿接近 0 時吸附回 0（不小心碰到不會整個變色）', () => {
+  assert.equal(snapSlider(0.01), 0);
+  assert.equal(snapSlider(-0.04), 0);
+  assert.equal(snapSlider(0.06), 0.06);
+  assert.equal(snapSlider(-0.5), -0.5);
 });

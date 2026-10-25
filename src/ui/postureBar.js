@@ -1,5 +1,5 @@
 // 下方姿勢列：預設姿勢（切換時播放動畫）、播放鍵、關節滑桿
-import { PRESETS, SLIDERS, NEUTRAL, lerpParams, easeInOut } from '../rig/presets.js';
+import { PRESETS, SLIDERS, NEUTRAL, lerpParams, easeInOut, snapSlider, isNeutral } from '../rig/presets.js';
 
 const DURATION = 1500; // 毫秒
 
@@ -48,7 +48,9 @@ export function initPostureBar(el, ctrl, content) {
     if (!key) return;
     cancelAnimationFrame(frame);
     active = null;
-    ctrl.setParams({ [key]: Number(e.target.value) });
+    const params = { ...ctrl.params, [key]: snapSlider(Number(e.target.value)) };
+    if (isNeutral(params)) active = 'neutral'; // 全部滑回 0 就是中立
+    ctrl.setParams(params);
   });
 
   function sync() {

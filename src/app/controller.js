@@ -5,7 +5,7 @@ import { NEUTRAL, isNeutral } from '../rig/presets.js';
 import { deformInto } from '../muscles/deform.js';
 import { lengthDelta } from '../muscles/length.js';
 import { lengthColor, PALETTE } from '../muscles/colors.js';
-import { createDisplayState, partDisplay, partOffset, resetDisplay } from './display.js';
+import { createDisplayState, partDisplay, partOffset, resetDisplay, restoreParts } from './display.js';
 import { linePartIds } from '../trains/lines.js';
 import { buildTrack } from '../trains/track.js';
 
@@ -52,9 +52,14 @@ export function createController(viewer, model) {
       const m = p.mesh.material;
       p.mesh.visible = d.visible;
       m.opacity = d.opacity;
-      m.transparent = d.opacity < 1;
-      m.depthWrite = d.opacity === 1;
+      const transparent = d.opacity < 1;
+      if (m.transparent !== transparent) {
+        m.transparent = transparent;
+        m.needsUpdate = true; // 不透明材質的著色器會把 alpha 固定為 1，切換時要重新編譯
+      }
+      m.depthWrite = !transparent;
       m.emissive.setRGB(d.glow, d.glow * 0.85, d.glow * 0.5);
+      p.pickable = d.pickable;
       p.target = partOffset(p.info, state, axis);
     }
     rebuildTrack();
@@ -138,9 +143,15 @@ export function createController(viewer, model) {
       applyDisplay();
       emit();
     },
-    // 只有看得清楚的部件能點（列車線淡化的部件點不到，方便點線上的肌肉）
+    // 把隱藏、半透明的部件全部顯示回來
+    restoreParts() {
+      restoreParts(state);
+      applyDisplay();
+      emit();
+    },
+    // 只有看得清楚的部件能點（半透明、列車線淡化的部件點不到，點選會穿過去選到後面的肌肉）
     pickAt(x, y) {
-      const candidates = model.parts.filter(p => p.mesh.visible && p.mesh.material.opacity >= 0.3).map(p => p.mesh);
+      const candidates = model.parts.filter(p => p.pickable).map(p => p.mesh);
       return viewer.pick(x, y, candidates)?.userData.partKey ?? null;
     },
     onChange(fn) {

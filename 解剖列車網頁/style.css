@@ -42,6 +42,10 @@ button.active { background: var(--accent); border-color: var(--accent); color: #
 .toggle { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
 .slider { display: block; margin: 10px 0; color: var(--muted); }
 .slider input { width: 100%; }
+.hidden-list h3 { margin: 14px 0 6px; font-size: 14px; font-weight: 600; }
+.hidden-list ul { margin: 0 0 8px; padding: 0; list-style: none; }
+.hidden-list li { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 3px 0; font-size: 13px; }
+.hidden-list li button { flex: none; padding: 1px 8px; font-size: 12px; white-space: nowrap; }
 
 #legend { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px; font-size: 13px; pointer-events: none; }
 #legend span { padding: 2px 8px; border-radius: 6px; background: rgba(0, 0, 0, 0.45); }
