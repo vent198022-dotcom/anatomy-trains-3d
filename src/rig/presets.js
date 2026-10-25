@@ -2,7 +2,7 @@
 //
 // 分左右的參數存成 'scapProtraction.l'、'scapProtraction.r'；頭頸、胸椎、骨盆在身體中線，不分左右。
 
-export const SIDED_PARAMS = ['scapProtraction', 'scapElevation', 'shoulderRotation'];
+export const SIDED_PARAMS = ['scapProtraction', 'scapElevation', 'shoulderRotation', 'elbowFlexion', 'forearmPronation', 'wristFlexion'];
 const MIDLINE_PARAMS = ['headForward', 'thoracicFlexion', 'pelvicTilt', 'pelvicObliquity'];
 
 export const NEUTRAL = Object.freeze({
@@ -29,23 +29,27 @@ export const PRESETS = {
   posteriorTilt: { label: '骨盆後傾', params: bilateral({ pelvicTilt: -1 }) },
   unevenShoulders: { label: '高低肩', params: bilateral({ 'scapElevation.r': 0.7, 'scapElevation.l': -0.3 }) },
   legLength: { label: '長短腳', params: bilateral({ pelvicObliquity: 1 }) },
+  phone: { label: '滑手機', params: bilateral({ headForward: 0.8, scapProtraction: 0.6, shoulderRotation: 0.4, elbowFlexion: 0.7, forearmPronation: 0.8, wristFlexion: 0.3 }) },
 };
 
-// group：滑桿分組（前後方向／左右方向／肩膀）
+// group：滑桿分組（前後方向／左右方向／上肢）
 export const SLIDERS = [
   { key: 'headForward', group: 'sagittal', sided: false, label: '頭頸前移', minLabel: '後收', maxLabel: '前移' },
   { key: 'thoracicFlexion', group: 'sagittal', sided: false, label: '胸椎伸展／屈曲', minLabel: '伸展', maxLabel: '駝背' },
   { key: 'pelvicTilt', group: 'sagittal', sided: false, label: '骨盆後傾／前傾', minLabel: '後傾', maxLabel: '前傾' },
   { key: 'pelvicObliquity', group: 'frontal', sided: false, label: '骨盆側傾（長短腳）', minLabel: '右側低', maxLabel: '左側低' },
-  { key: 'scapProtraction', group: 'shoulder', sided: true, label: '肩胛前伸／後縮', minLabel: '後縮', maxLabel: '前伸' },
-  { key: 'scapElevation', group: 'shoulder', sided: true, label: '肩胛上提／下壓', minLabel: '下壓', maxLabel: '上提' },
-  { key: 'shoulderRotation', group: 'shoulder', sided: true, label: '肩關節內旋／外旋', minLabel: '外旋', maxLabel: '內旋' },
+  { key: 'scapProtraction', group: 'upperLimb', sided: true, label: '肩胛前伸／後縮', minLabel: '後縮', maxLabel: '前伸' },
+  { key: 'scapElevation', group: 'upperLimb', sided: true, label: '肩胛上提／下壓', minLabel: '下壓', maxLabel: '上提' },
+  { key: 'shoulderRotation', group: 'upperLimb', sided: true, label: '肩關節內旋／外旋', minLabel: '外旋', maxLabel: '內旋' },
+  { key: 'elbowFlexion', group: 'upperLimb', sided: true, label: '手肘伸直／彎曲', minLabel: '過伸', maxLabel: '彎曲' },
+  { key: 'forearmPronation', group: 'upperLimb', sided: true, label: '前臂旋後／旋前', minLabel: '旋後', maxLabel: '旋前' },
+  { key: 'wristFlexion', group: 'upperLimb', sided: true, label: '手腕伸展／屈曲', minLabel: '伸展', maxLabel: '屈曲' },
 ];
 
 export const SLIDER_GROUPS = [
   ['sagittal', '前後方向'],
   ['frontal', '左右方向'],
-  ['shoulder', '肩膀（可分左右）'],
+  ['upperLimb', '上肢（可分左右）'],
 ];
 
 // 分左右滑桿的調整方式

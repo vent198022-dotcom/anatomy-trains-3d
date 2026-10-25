@@ -14,7 +14,17 @@ export const LIMITS = {
   thoracicFlexion: 30, // 胸椎屈曲（三段合計）
   pelvicTilt: 18, // 骨盆前傾（示範用，比一般幅度大，讓顏色看得出來）
   pelvicObliquity: 8, // 骨盆側傾（示範用，約等於 2 公分的長短腳）
+  // 以下關節正、負方向的範圍不同（解剖姿勢是手肘伸直、前臂完全旋後）
+  elbowFlexion: 140, // 手肘彎曲
+  elbowExtension: 10, // 手肘過伸
+  pronation: 150, // 前臂旋前
+  supination: 10, // 前臂再旋後
+  wristFlexion: 70, // 手腕屈曲
+  wristExtension: 60, // 手腕伸展
 };
+
+// 參數 → 角度（弧度）；正、負方向用不同的上限
+const jointAngle = (p, positive, negative) => DEG * (p >= 0 ? positive * p : negative * p);
 
 // 胸椎屈曲分給下、中、上三段的比例；頭頸各補回一半，讓視線維持水平
 const THORACIC_SHARE = { thoraxLow: 0.3, thoraxMid: 0.4, thoraxUp: 0.3 };
@@ -128,9 +138,21 @@ export function computePose(joints, params = {}) {
     const scapula = tiltScap.multiply(glide).multiply(clavicle);
     const axis = vec(joints.gh[s]).sub(vec(joints.elbow[s]));
     const arm = scapula.clone().multiply(rotateAbout(joints.gh[s], axis, sgn * LIMITS.humeralRotation * DEG * p[`shoulderRotation.${s}`]));
+    // 手肘：尺骨繞內、外上髁連線轉；前臂旋轉：橈骨（和手）繞橈骨頭 → 尺骨頭的軸轉；手腕：手繞腕部、與手肘平行的軸轉
+    const [medialEpicondyle, lateralEpicondyle] = joints.elbowAxis[s];
+    const elbowAxis = vec(lateralEpicondyle).sub(vec(medialEpicondyle));
+    const elbowPivot = vec(medialEpicondyle).add(vec(lateralEpicondyle)).multiplyScalar(0.5);
+    const ulna = arm.clone().multiply(rotateAbout(elbowPivot, elbowAxis, sgn * jointAngle(p[`elbowFlexion.${s}`], LIMITS.elbowFlexion, LIMITS.elbowExtension)));
+    const [radialHead, ulnarHead] = joints.forearmAxis[s];
+    // 旋前時拇指由外側轉向前方：右側繞「橈骨頭 → 尺骨頭」軸轉負角
+    const radius = ulna.clone().multiply(rotateAbout(radialHead, vec(ulnarHead).sub(vec(radialHead)), -sgn * jointAngle(p[`forearmPronation.${s}`], LIMITS.pronation, LIMITS.supination)));
+    const hand = radius.clone().multiply(rotateAbout(joints.wrist[s], elbowAxis, sgn * jointAngle(p[`wristFlexion.${s}`], LIMITS.wristFlexion, LIMITS.wristExtension)));
     mats.set(`clavicle.${s}`, thoraxUp.clone().multiply(clavicle));
     mats.set(`scapula.${s}`, thoraxUp.clone().multiply(scapula));
     mats.set(`arm.${s}`, thoraxUp.clone().multiply(arm));
+    mats.set(`ulna.${s}`, thoraxUp.clone().multiply(ulna));
+    mats.set(`radius.${s}`, thoraxUp.clone().multiply(radius));
+    mats.set(`hand.${s}`, thoraxUp.clone().multiply(hand));
   }
   return mats;
 }

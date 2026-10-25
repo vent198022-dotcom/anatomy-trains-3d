@@ -12,6 +12,10 @@ const J = {
   elbow: { r: [-21, 109, -3], l: [21, 109, -3] },
   scapAnchor: { r: [-6.5, 135, -10], l: [6.5, 135, -10] },
   hip: { r: [-8.4, 86, -0.5], l: [8.4, 86, -0.5] },
+  // 手肘轉軸 [內上髁, 外上髁]、前臂旋轉軸 [橈骨頭, 尺骨頭]、手腕轉動中心（頭狀骨頭部）
+  elbowAxis: { r: [[-18.5, 110.7, -3.6], [-24.8, 111.1, -4.2]], l: [[18.5, 110.7, -3.6], [24.8, 111.1, -4.2]] },
+  forearmAxis: { r: [[-23.9, 108.7, -3.2], [-24.8, 86.3, 1.4]], l: [[23.9, 108.7, -3.2], [24.8, 86.3, 1.4]] },
+  wrist: { r: [-26.4, 85.1, 2], l: [26.4, 85.1, 2] },
   pivots: {
     L5: [0, 95.8, 0.2], L4: [0, 99.7, 0.9], L3: [0, 103.3, 1.2], L2: [0, 106.8, 0.9], L1: [0, 110.2, 0.2],
     thoraxLow: [0, 113.7, -0.5], thoraxMid: [0, 125.5, -3.4], thoraxUp: [0, 136, -3.6],
@@ -83,4 +87,37 @@ test('長短腳（左短）：左腿整條下移，右腿不動，胸廓維持�
   assert.ok(drop < -1, `左髖下移 ${drop}`);
   assert.ok(Math.abs(at(mats, 'pelvis', J.hip.l).y - at(mats, 'femur.l', J.hip.l).y) < 1e-6, '左髖仍在股骨頭上');
   assert.ok(noRotation(mats.get('thoraxLow')));
+});
+
+test('手肘彎曲：前臂往前、往上，上臂不動，左右對稱；橈骨與手跟著尺骨', () => {
+  const mats = computePose(J, bilateral({ elbowFlexion: 0.6 })); // 84°
+  const r = at(mats, 'ulna.r', J.wrist.r), l = at(mats, 'ulna.l', J.wrist.l);
+  assert.ok(r.z > J.wrist.r[2] + 10 && r.y > J.wrist.r[1] + 10, `右手腕 ${r.toArray()}`);
+  assert.ok(Math.abs(r.z - l.z) < 1e-6 && Math.abs(r.x + l.x) < 1e-6);
+  assert.ok(isIdentity(mats.get('arm.r')));
+  assert.ok(at(mats, 'hand.r', J.wrist.r).distanceTo(r) < 1e-6);
+});
+
+test('前臂旋前：拇指側（橈骨莖突一帶）轉到前方，尺骨不動', () => {
+  const mats = computePose(J, bilateral({ forearmPronation: 0.6 })); // 90°
+  const thumbSide = s => [J.forearmAxis[s][1][0] + (s === 'r' ? -3 : 3), 86.3, 1.4];
+  const r = at(mats, 'radius.r', thumbSide('r')), l = at(mats, 'radius.l', thumbSide('l'));
+  assert.ok(r.z > 1.4 + 2, `右 z=${r.z}`);
+  assert.ok(Math.abs(r.z - l.z) < 1e-6 && Math.abs(r.x + l.x) < 1e-6);
+  assert.ok(isIdentity(mats.get('ulna.r')));
+});
+
+test('手腕屈曲：手指往掌側（前方）彎，前臂不動', () => {
+  const mats = computePose(J, bilateral({ wristFlexion: 1 }));
+  for (const s of ['l', 'r']) {
+    const tip = [J.wrist[s][0], J.wrist[s][1] - 15, J.wrist[s][2]];
+    assert.ok(at(mats, `hand.${s}`, tip).z > J.wrist[s][2] + 10, s);
+    assert.ok(isIdentity(mats.get(`radius.${s}`)) && isIdentity(mats.get(`ulna.${s}`)), s);
+  }
+});
+
+test('只彎右手肘：左手不動', () => {
+  const mats = computePose(J, { 'elbowFlexion.r': 1 });
+  assert.ok(!isIdentity(mats.get('ulna.r')));
+  for (const k of ['ulna.l', 'radius.l', 'hand.l']) assert.ok(isIdentity(mats.get(k)), k);
 });

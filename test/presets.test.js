@@ -9,8 +9,10 @@ test('預設姿勢與滑桿都對應同一組參數', () => {
   assert.deepEqual(fromSliders, keys);
 });
 
-test('8 個預設姿勢', () => {
-  assert.deepEqual(Object.keys(PRESETS), ['neutral', 'roundedShoulders', 'forwardHead', 'kyphosis', 'anteriorTilt', 'posteriorTilt', 'unevenShoulders', 'legLength']);
+test('9 個預設姿勢', () => {
+  assert.deepEqual(Object.keys(PRESETS), ['neutral', 'roundedShoulders', 'forwardHead', 'kyphosis', 'anteriorTilt', 'posteriorTilt', 'unevenShoulders', 'legLength', 'phone']);
+  assert.equal(PRESETS.phone.params['elbowFlexion.l'], 0.7);
+  assert.equal(PRESETS.phone.params['forearmPronation.r'], 0.8);
   assert.equal(PRESETS.unevenShoulders.params['scapElevation.r'], 0.7);
   assert.equal(PRESETS.unevenShoulders.params['scapElevation.l'], -0.3);
 });
