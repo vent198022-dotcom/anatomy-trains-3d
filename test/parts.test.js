@@ -36,7 +36,7 @@ test('骨段名稱', () => {
   assert.equal(segKey('scapula', 'r'), 'scapula.r');
   assert.equal(segKey('femur', 'l'), 'femur.l');
   assert.equal(segKey('L3', 'r'), 'L3');
-  assert.equal(SEGMENT_KEYS.length, AXIAL.length + 12);
+  assert.equal(SEGMENT_KEYS.length, AXIAL.length + 18);
   const defined = new Set(BONE_SEGMENTS.map(s => (s.sided ? `${s.segment}.r` : s.segment)));
   for (const k of SEGMENT_KEYS.filter(k => !k.endsWith('.l'))) assert.ok(defined.has(k), `骨段 ${k} 沒有骨頭`);
 });

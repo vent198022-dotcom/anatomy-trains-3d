@@ -23,6 +23,15 @@ const both = list => list.flatMap(b => (b.includes('{s}') ? [b.replace('{s}', 'l
 const CLAVICLE = ['Clavicle.{s}'];
 const SCAPULA = ['Scapula.{s}'];
 const HUMERUS = ['Humerus.{s}'];
+const RADIUS = ['Radius.{s}'];
+const ULNA = ['Ulna.{s}'];
+const FOREARM = [...RADIUS, ...ULNA]; // 從肱骨到手的肌肉以前臂骨當中間群組，肌腹才會跟著前臂
+const FINGER = ['first', 'second', 'third', 'fourth', 'fifth'];
+const phalanges = (fingers, kinds = ['Proximal', 'Middle', 'Distal']) =>
+  fingers.flatMap(f => kinds.filter(k => !(f === 1 && k === 'Middle')).map(k => `${k} phalanx of ${FINGER[f - 1]} finger of hand.{s}`));
+const metacarpal = n => `${cap(FINGER[n - 1])} metacarpal bone.{s}`;
+const CARPALS = ['Scaphoid', 'Lunate', 'Triquetrum', 'Pisiform', 'Trapezium', 'Trapezoid', 'Capitate', 'Hamate'].map(b => `${b} bone.{s}`);
+const METACARPALS = [1, 2, 3, 4, 5].map(metacarpal);
 const HIP = ['Hip bone.{s}'];
 const PELVIS = ['Hip bone.{s}', 'Sacrum', 'Coccyx'];
 const FEMUR = ['Femur.{s}'];
@@ -52,6 +61,8 @@ function part(id, zName, layer, region, attach, opts = {}) {
     measure: opts.measure ?? true, // 筋膜、肌腱不計算長度
     maxGap: opts.maxGap ?? 2, // 附著區與骨頭的最大容許距離（公分）
     tp: opts.tp ?? [0.5],
+    // 繞著橈骨捲的旋後肌群：前臂旋轉改用文獻力臂（公分；負值＝旋前時拉長），直線量不出捲繞
+    pronationArm: opts.pronationArm ?? null,
   };
 }
 const fascia = { measure: false };
@@ -74,11 +85,12 @@ export const PARTS = [
   part('deltoidAnt', 'Clavicular part of deltoid muscle', 'superficial', 'upperLimb', [CLAVICLE, HUMERUS], { via: true, tp: [0.4] }),
   part('deltoidMid', 'Acromial part of deltoid muscle', 'superficial', 'upperLimb', [SCAPULA, HUMERUS], { via: true, tp: [0.45] }),
   part('deltoidPost', 'Scapular spinal part of deltoid muscle', 'superficial', 'upperLimb', [SCAPULA, HUMERUS], { via: true, tp: [0.45] }),
-  part('bicepsLong', 'Long head of biceps brachii', 'superficial', 'upperLimb', [SCAPULA, ['Radius.{s}']], { tp: [0.6] }),
+  // 肱二頭肌、肱三頭肌長頭以肱骨當中間群組：肌腹跟著肱骨，屈肘時才會真的縮短或拉長
+  part('bicepsLong', 'Long head of biceps brachii', 'superficial', 'upperLimb', [SCAPULA, HUMERUS, RADIUS], { tp: [0.6], pronationArm: -0.8 }),
   // Z-Anatomy 的短頭網格止於肘上方（共同肌腱沒有建模），離橈骨約 4 公分
-  part('bicepsShort', 'Short head of biceps brachii', 'superficial', 'upperLimb', [SCAPULA, ['Radius.{s}']], { maxGap: 5, tp: [0.6] }),
+  part('bicepsShort', 'Short head of biceps brachii', 'superficial', 'upperLimb', [SCAPULA, HUMERUS, RADIUS], { maxGap: 5, tp: [0.6], pronationArm: -0.8 }),
   part('coracobrachialis', 'Coracobrachialis muscle', 'middle', 'upperLimb', [SCAPULA, HUMERUS]),
-  part('tricepsLong', 'Long head of triceps brachii', 'superficial', 'upperLimb', [SCAPULA, ['Ulna.{s}']], { tp: [0.35] }),
+  part('tricepsLong', 'Long head of triceps brachii', 'superficial', 'upperLimb', [SCAPULA, HUMERUS, ULNA], { tp: [0.35] }),
   part('tricepsLat', 'Lateral head of triceps brachii', 'superficial', 'upperLimb', [HUMERUS, ['Ulna.{s}']]),
   part('tricepsMed', 'Medial head of triceps brachii', 'deep', 'upperLimb', [HUMERUS, ['Ulna.{s}']], { tp: [0.7] }),
   part('latissimus', 'Latissimus dorsi muscle', 'superficial', 'trunk', [[...Ts(7, 12), ...Ls(1, 5), 'Hip bone.{s}', ...ribs(9, 12)], HUMERUS], { tp: [0.75] }),
@@ -87,6 +99,57 @@ export const PARTS = [
   part('infraspinatus', 'Infraspinatus muscle', 'middle', 'upperLimb', [SCAPULA, HUMERUS], { tp: [0.35] }),
   part('teresMinor', 'Teres minor muscle', 'middle', 'upperLimb', [SCAPULA, HUMERUS]),
   part('subscapularis', 'Subscapularis muscle', 'deep', 'upperLimb', [SCAPULA, HUMERUS], { tp: [0.7] }),
+
+  // ── 上肢：上臂前側、前臂前側（屈肌群） ──
+  part('brachialis', 'Brachialis muscle', 'deep', 'upperLimb', [HUMERUS, ULNA], { tp: [0.6] }),
+  part('pronatorTeresHum', 'Superficial head of pronator teres', 'superficial', 'upperLimb', [HUMERUS, RADIUS], { tp: [0.3] }),
+  part('pronatorTeresUln', 'Deep head of pronator teres', 'deep', 'upperLimb', [ULNA, RADIUS], { tp: [] }),
+  part('flexorCarpiRadialis', 'Flexor carpi radialis', 'superficial', 'upperLimb', [HUMERUS, FOREARM, [metacarpal(2), metacarpal(3)]], { tp: [0.25], maxGap: 3 }),
+  part('palmarisLongus', 'Palmaris longus muscle', 'superficial', 'upperLimb', [HUMERUS, FOREARM, [...CARPALS, ...METACARPALS]], { tp: [0.25], maxGap: 4 }),
+  part('fcuHumeral', 'Humeral head of flexor carpi ulnaris', 'superficial', 'upperLimb', [HUMERUS, FOREARM, ['Pisiform bone.{s}', 'Hamate bone.{s}', metacarpal(5)]], { tp: [0.3], maxGap: 3 }),
+  part('fcuUlnar', 'Ulnar head of flexor carpi ulnaris', 'superficial', 'upperLimb', [ULNA, ['Pisiform bone.{s}', 'Hamate bone.{s}', metacarpal(5)]], { tp: [], maxGap: 4 }),
+  part('fdsHumeroUlnar', 'Humero-ulnar head of flexor digitorum superficialis', 'middle', 'upperLimb', [[...HUMERUS, ...ULNA], RADIUS, phalanges([2, 3, 4, 5], ['Middle'])], { tp: [0.3], maxGap: 3 }),
+  // 橈側頭的網格只到手腕（肌腱併在肱尺頭裡），遠端以腕骨為準
+  part('fdsRadial', 'Radial head of flexor digitorum superficialis', 'middle', 'upperLimb', [RADIUS, CARPALS], { tp: [], maxGap: 4 }),
+  part('flexorDigitorumProfundus', 'Flexor digitorum profundus', 'deep', 'upperLimb', [ULNA, phalanges([2, 3, 4, 5], ['Distal'])], { tp: [0.3], maxGap: 3 }),
+  part('flexorPollicisLongus', 'Flexor pollicis longus', 'deep', 'upperLimb', [RADIUS, phalanges([1], ['Distal'])], { tp: [0.4], maxGap: 4 }),
+  part('pronatorQuadratus', 'Pronator quadratus', 'deep', 'upperLimb', [ULNA, RADIUS], { tp: [] }),
+
+  // ── 上肢：前臂後側（伸肌群） ──
+  part('anconeus', 'Anconeus muscle', 'middle', 'upperLimb', [HUMERUS, ULNA], { tp: [] }),
+  part('brachioradialis', 'Brachioradialis muscle', 'superficial', 'upperLimb', [HUMERUS, RADIUS], { tp: [0.35] }),
+  part('extensorCarpiRadialisLongus', 'Extensor carpi radialis longus', 'superficial', 'upperLimb', [HUMERUS, FOREARM, [metacarpal(2)]], { tp: [0.25], maxGap: 3 }),
+  part('extensorCarpiRadialisBrevis', 'Extensor carpi radialis brevis', 'superficial', 'upperLimb', [HUMERUS, FOREARM, [metacarpal(3)]], { tp: [0.25], maxGap: 3 }),
+  part('extensorDigitorum', 'Extensor digitorum', 'superficial', 'upperLimb', [HUMERUS, FOREARM, phalanges([2, 3, 4, 5])], { tp: [0.3], maxGap: 3 }),
+  part('extensorDigitiMinimi', 'Extensor digiti minimi', 'superficial', 'upperLimb', [HUMERUS, FOREARM, phalanges([5])], { tp: [0.3], maxGap: 3 }),
+  part('ecuHumeral', 'Humeral head of extensor carpi ulnaris', 'superficial', 'upperLimb', [HUMERUS, FOREARM, [metacarpal(5)]], { tp: [0.3], maxGap: 3 }),
+  part('ecuUlnar', 'Ulnar head of extensor carpi ulnaris', 'superficial', 'upperLimb', [ULNA, [metacarpal(5)]], { tp: [], maxGap: 3 }),
+  part('supinator', 'Supinator', 'deep', 'upperLimb', [[...HUMERUS, ...ULNA], RADIUS], { tp: [0.5], pronationArm: -1 }),
+  part('abductorPollicisLongus', 'Abductor pollicis longus', 'deep', 'upperLimb', [[...ULNA, ...RADIUS], [metacarpal(1)]], { tp: [], maxGap: 3 }),
+  part('extensorPollicisLongus', 'Extensor pollicis longus', 'deep', 'upperLimb', [ULNA, phalanges([1], ['Distal'])], { tp: [], maxGap: 4 }),
+  part('extensorPollicisBrevis', 'Extensor pollicis brevis', 'deep', 'upperLimb', [RADIUS, phalanges([1], ['Proximal'])], { tp: [], maxGap: 4 }),
+  part('extensorIndicis', 'Extensor indicis', 'deep', 'upperLimb', [ULNA, phalanges([2])], { tp: [], maxGap: 3 }),
+
+  // ── 上肢：手部（手指關節沒有建模，長度不會改變） ──
+  part('abductorPollicisBrevis', 'Abductor pollicis brevis', 'superficial', 'upperLimb', [['Scaphoid bone.{s}', 'Trapezium bone.{s}'], phalanges([1], ['Proximal'])], { tp: [0.5], maxGap: 3 }),
+  part('flexorPollicisBrevisSup', 'Superficial head of flexor pollicis brevis', 'superficial', 'upperLimb', [['Trapezium bone.{s}'], phalanges([1], ['Proximal'])], { tp: [], maxGap: 3 }),
+  part('flexorPollicisBrevisDeep', 'Deep head of flexor pollicis brevis', 'deep', 'upperLimb', [['Trapezoid bone.{s}', 'Capitate bone.{s}'], phalanges([1], ['Proximal'])], { tp: [], maxGap: 3 }),
+  part('opponensPollicis', 'Opponens pollicis muscle', 'deep', 'upperLimb', [['Trapezium bone.{s}'], [metacarpal(1)]], { tp: [0.5], maxGap: 3 }),
+  part('adductorPollicisObl', 'Oblique head of adductor pollicis', 'deep', 'upperLimb', [['Capitate bone.{s}', metacarpal(2), metacarpal(3)], phalanges([1], ['Proximal'])], { tp: [0.5], maxGap: 3 }),
+  part('adductorPollicisTrans', 'Transverse head of adductor pollicis', 'deep', 'upperLimb', [[metacarpal(3)], phalanges([1], ['Proximal'])], { tp: [], maxGap: 3 }),
+  part('abductorDigitiMinimi', 'Abductor digiti minimi of hand', 'superficial', 'upperLimb', [['Pisiform bone.{s}'], phalanges([5], ['Proximal'])], { tp: [0.5], maxGap: 3 }),
+  part('flexorDigitiMinimi', 'Flexor digiti minimi of hand', 'superficial', 'upperLimb', [['Hamate bone.{s}'], phalanges([5], ['Proximal'])], { tp: [], maxGap: 3 }),
+  part('opponensDigitiMinimi', 'Opponens digiti minimi muscle of hand', 'deep', 'upperLimb', [['Hamate bone.{s}'], [metacarpal(5)]], { tp: [], maxGap: 3 }),
+  part('lumbricalsHand', 'Lumbrical muscles of hand', 'middle', 'upperLimb', [METACARPALS.slice(1), phalanges([2, 3, 4, 5], ['Proximal'])], { tp: [], maxGap: 3 }),
+  part('palmarInterossei', 'Palmar interossei muscles', 'deep', 'upperLimb', [[metacarpal(2), metacarpal(4), metacarpal(5)], phalanges([2, 4, 5], ['Proximal'])], { tp: [], maxGap: 3 }),
+  part('dorsalInterosseiHand', 'Dorsal interossei muscles of hand', 'deep', 'upperLimb', [METACARPALS, phalanges([2, 3, 4], ['Proximal'])], { tp: [0.5], maxGap: 3 }),
+
+  // ── 上肢：筋膜與支持帶（列車線用，不計算長度） ──
+  part('medialIntermuscularSeptum', 'Medial intermuscular septum of arm', 'deep', 'upperLimb', [HUMERUS, HUMERUS], { ...fascia, tp: [] }),
+  part('lateralIntermuscularSeptum', 'Lateral intermuscular septum of arm', 'deep', 'upperLimb', [HUMERUS, HUMERUS], { ...fascia, tp: [] }),
+  part('flexorRetinaculum', 'Flexor retinaculum of wrist', 'superficial', 'upperLimb', [['Pisiform bone.{s}', 'Hamate bone.{s}'], ['Scaphoid bone.{s}', 'Trapezium bone.{s}']], { ...fascia, tp: [], maxGap: 3 }),
+  part('extensorRetinaculum', 'Extensor retinaculum of wrist', 'superficial', 'upperLimb', [RADIUS, [...ULNA, 'Triquetrum bone.{s}', 'Pisiform bone.{s}']], { ...fascia, tp: [], maxGap: 3 }),
+  part('palmarAponeurosis', 'Palmar aponeurosis', 'superficial', 'upperLimb', [['Scaphoid bone.{s}', 'Trapezium bone.{s}', 'Hamate bone.{s}', 'Pisiform bone.{s}'], phalanges([2, 3, 4, 5], ['Proximal'])], { ...fascia, tp: [], maxGap: 3 }),
 
   // ── 2A：枕下肌群與頸部 ──
   part('rectusCapPostMajor', 'Rectus posterior major capitis muscle', 'deep', 'headNeck', [[C(2)], OCCIPUT]),
@@ -242,7 +305,10 @@ export const BONE_SEGMENTS = [
   { segment: 'head', groups: ['Bones of cranium.g'], names: ['Mandible', 'Hyoid bone', 'Thyroid cartilage'] },
   { segment: 'clavicle', sided: true, names: ['Clavicle.{s}'] },
   { segment: 'scapula', sided: true, names: ['Scapula.{s}'] },
-  { segment: 'arm', sided: true, groups: ['Bones of free part of upper limb.g'] },
+  { segment: 'arm', sided: true, names: ['Humerus.{s}'] },
+  { segment: 'ulna', sided: true, names: ['Ulna.{s}'] },
+  { segment: 'radius', sided: true, names: ['Radius.{s}'] },
+  { segment: 'hand', sided: true, groups: ['Bones of free part of upper limb.g'] }, // 上肢自由部其餘的骨頭（腕骨、掌骨、指骨）
   { segment: 'femur', sided: true, names: ['Femur.{s}'] },
   { segment: 'shank', sided: true, names: ['Tibia.{s}', 'Fibula.{s}', 'Patella.{s}'] },
   { segment: 'foot', sided: true, groups: ['Bones of free part of lower limb.g'] }, // 下肢自由部其餘的骨頭（足骨）

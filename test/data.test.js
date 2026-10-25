@@ -27,6 +27,11 @@ test('骨段、權重、痠痛點的資料一致', () => {
     for (const s of [p.segA, p.segB, ...p.vias.map(v => v.seg), ...(p.skinSegs ?? [])]) assert.ok(segs.has(s), `${p.key}：${s}`);
     assert.equal(p.skinSegs ? p.sOffset !== undefined : p.sOffset === undefined, true, `${p.key} 權重資料`);
     for (const v of p.tps) assert.ok(v >= 0 && v < p.vCount, `${p.key} 痠痛點頂點 ${v}`);
+    for (const w of p.wraps ?? []) {
+      // 手腕一律是「手相對橈骨」的轉動，所以近端骨段不一定是這塊肌肉附著的骨頭
+      assert.ok(segs.has(w.prox) && segs.has(w.dist) && w.dist.endsWith(`.${p.side}`), `${p.key} 力臂骨段 ${w.prox} → ${w.dist}`);
+      assert.ok(Number.isFinite(w.m) && Math.abs(Math.hypot(...w.axis) - 1) < 0.01, `${p.key} 力臂`);
+    }
   }
   for (const b of meta.bones) assert.ok(segs.has(b.segment), b.name);
 });
@@ -48,6 +53,9 @@ test('關節位置合理', () => {
   assert.ok(j.hip.r[0] > -12 && j.hip.r[0] < -5 && j.hip.r[1] > 80 && j.hip.r[1] < 92, `股骨頭 ${j.hip.r}`);
   const order = ['L5', 'L4', 'L3', 'L2', 'L1', 'thoraxLow', 'thoraxMid', 'thoraxUp', 'neckLow', 'neckUp', 'head'].map(k => j.pivots[k][1]);
   assert.deepEqual([...order].sort((x, y) => x - y), order, '脊椎轉軸由下往上');
+  const [medial, lateral] = j.elbowAxis.r;
+  assert.ok(medial[0] > lateral[0] && medial[1] > 105 && medial[1] < 116, `手肘轉軸 ${j.elbowAxis.r}`);
+  assert.ok(j.wrist.r[1] > 80 && j.wrist.r[1] < 90 && j.wrist.r[1] < j.forearmAxis.r[1][1], `手腕 ${j.wrist.r}`);
 });
 
 test('三角面與檔案大小在預算內', () => {

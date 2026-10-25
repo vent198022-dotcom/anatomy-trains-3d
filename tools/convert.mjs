@@ -4,13 +4,14 @@ import { loadFbx, indexMeshes, indexGroups, meshesUnder } from './lib/fbx.mjs';
 import { isAnnotation, sideOf, withSide } from './lib/names.mjs';
 import { worldGeometry, simplify } from './lib/geometry.mjs';
 import { PointGrid, attachmentRegion, refineEnds, midBellyCentroid, meanPoint } from './lib/attach.mjs';
-import { samplePoints, skinWeights, nearestSegment, chainVias, superficialVertex } from './lib/skin.mjs';
+import { samplePoints, skinWeights, nearestSegment, chainVias, superficialVertex, momentArm } from './lib/skin.mjs';
 import { estimateJoints } from './lib/joints.mjs';
 import { packMeshes } from './lib/pack.mjs';
 import { PARTS, BONE_SEGMENTS, PART_RATIO, BONE_RATIO } from './parts.js';
 import { segKey } from '../src/rig/segments.js';
 
 const RAW = 'data/raw';
+const LARGE_ROTATION = /^(ulna|radius|hand)\./; // 手肘、前臂旋轉、手腕的骨段
 const OUT = 'data/processed';
 const FILES = ['MuscularSystem100.fbx', 'SkeletalSystem100.fbx'];
 for (const f of FILES) {
@@ -83,7 +84,13 @@ for (const p of PARTS) {
     if (!mesh) throw new Error(`找不到肌肉 ${meshName}`);
     const geo = await simplify(worldGeometry(mesh), PART_RATIO);
     const groups = p.attach.map(at => at.bones.map(b => (p.unsided ? b : withSide(b, side))));
-    const regions = groups.map(names => attachmentRegion(geo.positions, new PointGrid(concat(names.map(n => bone(n).positions)), 1), 0.5, Math.ceil(p.maxGap) + 1));
+    const regions = groups.map(names => {
+      try {
+        return attachmentRegion(geo.positions, new PointGrid(concat(names.map(n => bone(n).positions)), 1), 0.5, Math.ceil(p.maxGap) + 1);
+      } catch (err) {
+        throw new Error(`${p.id}.${side}（${names[0]} 等）：${err.message}`);
+      }
+    });
     const ends = refineEnds(geo.positions, regions[0], regions[regions.length - 1]);
 
     // 這個部件跨過的骨段（依附著骨頭）；端點跟著離它最近的骨頭所屬骨段
@@ -97,15 +104,39 @@ for (const p of PARTS) {
     const segA = endSeg(groups[0], ends.a);
     const segB = endSeg(groups[groups.length - 1], ends.b);
 
-    let skin = null, skinSegs = null;
+    let skin = null, skinSegs = null, wraps = null;
     let vias = p.via ? [{ seg: segB, p: round(midBellyCentroid(geo.positions, ends.a, ends.b)) }] : [];
-    if (segs.length > 2) {
-      // 跨三個以上骨段：每個頂點跟著最近的兩個骨段；端點群組以外的骨段各加一個轉折點
+    const crossesLimbJoint = segs.length >= 2 && segs.some(s => LARGE_ROTATION.test(s));
+    if (segs.length > 2 || crossesLimbJoint) {
+      // 跨三個以上骨段、或跨過手肘／手腕（轉動角度大，沿連線混合會塌陷）：每個頂點跟著最近的兩個骨段
       skin = skinWeights(geo.positions, segPoints);
       skinSegs = segs;
+      // 端點群組以外的骨段各加一個轉折點；前臂骨不加（前臂旋轉時，分別跟著尺骨、橈骨的兩個轉折點會讓連線打折）
       const endSegs = new Set([...groups[0], ...groups[groups.length - 1]].map(n => bone(n).segment));
-      const middle = segs.map((s, i) => i).filter(i => !endSegs.has(segs[i]));
+      const middle = segs.map((s, i) => i).filter(i => !endSegs.has(segs[i]) && !/^(ulna|radius)\./.test(segs[i]));
       vias = chainVias(geo.positions, skin, middle, ends.a, ends.b).map(v => ({ seg: segs[v.s], p: round(v.p) }));
+    }
+    if (crossesLimbJoint) {
+      // 跨手肘、手腕：這兩個關節的長度變化用「力臂 × 轉角」（見 src/muscles/length.js）
+      const has = name => segs.includes(`${name}.${side}`);
+      const [medialEpicondyle, lateralEpicondyle] = joints.elbowAxis[side];
+      const elbowPivot = medialEpicondyle.map((v, i) => (v + lateralEpicondyle[i]) / 2);
+      const unit = v => v.map(x => x / Math.hypot(...v));
+      const axis = unit(lateralEpicondyle.map((v, i) => v - medialEpicondyle[i]));
+      const forearmDir = unit(joints.wrist[side].map((v, i) => v - elbowPivot[i]));
+      const distalOfElbow = has('ulna') || has('radius') || has('hand');
+      const proximalOfWrist = has('arm') || has('ulna') || has('radius');
+      wraps = [];
+      if (has('arm') && distalOfElbow) wraps.push({ prox: `arm.${side}`, dist: `ulna.${side}`, axis: round(axis), m: round(momentArm(geo.positions, elbowPivot, forearmDir, axis, 4)) });
+      if (p.pronationArm) {
+        // 旋前方向：拇指由外側轉向前方；轉軸取「橈骨頭 → 尺骨頭」並調整正負，讓正向轉動＝旋前
+        const [radialHead, ulnarHead] = joints.forearmAxis[side];
+        let k = unit(ulnarHead.map((v, i) => v - radialHead[i]));
+        const lateral = side === 'r' ? -1 : 1;
+        if (-k[1] * lateral < 0) k = k.map(v => -v); // (k × 外側方向)·前方 = −k_y × 外側 x，要大於 0
+        wraps.push({ prox: `ulna.${side}`, dist: `radius.${side}`, axis: round(k), m: p.pronationArm });
+      }
+      if (has('hand') && proximalOfWrist) wraps.push({ prox: `radius.${side}`, dist: `hand.${side}`, axis: round(axis), m: round(momentArm(geo.positions, joints.wrist[side], forearmDir, axis, 2)) });
     }
 
     const allBonePoints = concat(segPoints);
@@ -120,6 +151,7 @@ for (const p of PARTS) {
       segA,
       segB,
       skinSegs,
+      wraps,
       a: round(ends.a),
       b: round(ends.b),
       vias,
