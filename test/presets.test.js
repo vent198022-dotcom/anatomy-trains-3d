@@ -9,6 +9,12 @@ test('預設姿勢與滑桿都對應同一組參數', () => {
   assert.deepEqual(fromSliders, keys);
 });
 
+test('8 個預設姿勢', () => {
+  assert.deepEqual(Object.keys(PRESETS), ['neutral', 'roundedShoulders', 'forwardHead', 'kyphosis', 'anteriorTilt', 'posteriorTilt', 'unevenShoulders', 'legLength']);
+  assert.equal(PRESETS.unevenShoulders.params['scapElevation.r'], 0.7);
+  assert.equal(PRESETS.unevenShoulders.params['scapElevation.l'], -0.3);
+});
+
 test('bilateral：分左右的參數兩側同值，其餘為 0', () => {
   const p = bilateral({ scapProtraction: 0.8, headForward: 0.2 });
   assert.equal(p['scapProtraction.l'], 0.8);
