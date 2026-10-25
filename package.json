@@ -1,0 +1,18 @@
+{
+  "name": "anatomy-trains-3d",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fetch-data": "node tools/fetch-data.mjs",
+    "model": "node tools/convert.mjs",
+    "build": "node build.mjs",
+    "serve": "node build.mjs --serve",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0",
+    "meshoptimizer": "1.3.0",
+    "three": "0.170.0"
+  }
+}
