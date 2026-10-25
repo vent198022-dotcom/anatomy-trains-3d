@@ -1,20 +1,24 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PARTS, BONE_SEGMENTS } from '../tools/parts.js';
-import { segKey, SEGMENT_KEYS } from '../src/rig/segments.js';
+import { segKey, SEGMENT_KEYS, AXIAL } from '../src/rig/segments.js';
 
-test('28 個部件，id 不重複，層與骨段都合法', () => {
+test('部件 id 不重複，層、分區、附著群組都合法', () => {
   const ids = PARTS.map(p => p.id);
-  assert.equal(PARTS.length, 28);
   assert.equal(new Set(ids).size, ids.length);
-  const segments = new Set(BONE_SEGMENTS.map(s => s.segment));
+  assert.ok(PARTS.length >= 140, `部件數 ${PARTS.length}`);
   for (const p of PARTS) {
     assert.ok(['superficial', 'middle', 'deep'].includes(p.layer), p.id);
-    assert.equal(p.attach.length, 2, p.id);
-    for (const a of p.attach) {
-      assert.ok(segments.has(a.segment), `${p.id}：${a.segment}`);
-      assert.ok(a.bones.length > 0, p.id);
-    }
+    assert.ok(['headNeck', 'trunk', 'upperLimb', 'lowerLimb'].includes(p.region), p.id);
+    assert.ok(p.attach.length >= 2, p.id);
+    for (const a of p.attach) assert.ok(a.bones.length > 0, p.id);
+    for (const t of p.tp) assert.ok(t > 0 && t < 1, `${p.id} 痠痛點位置 ${t}`);
+  }
+});
+
+test('中線部件的骨頭不用 {s}', () => {
+  for (const p of PARTS.filter(q => q.unsided)) {
+    for (const a of p.attach) for (const b of a.bones) assert.ok(!b.includes('{s}'), `${p.id}：${b}`);
   }
 });
 
@@ -30,6 +34,9 @@ test('斜方肌上下部依幾何位置對應（Z-Anatomy 名稱相反）', () =
 
 test('骨段名稱', () => {
   assert.equal(segKey('scapula', 'r'), 'scapula.r');
-  assert.equal(segKey('torso', 'r'), 'torso');
-  assert.equal(SEGMENT_KEYS.length, 9);
+  assert.equal(segKey('femur', 'l'), 'femur.l');
+  assert.equal(segKey('L3', 'r'), 'L3');
+  assert.equal(SEGMENT_KEYS.length, AXIAL.length + 12);
+  const defined = new Set(BONE_SEGMENTS.map(s => (s.sided ? `${s.segment}.r` : s.segment)));
+  for (const k of SEGMENT_KEYS.filter(k => !k.endsWith('.l'))) assert.ok(defined.has(k), `骨段 ${k} 沒有骨頭`);
 });
