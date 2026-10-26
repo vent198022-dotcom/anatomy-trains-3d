@@ -1,6 +1,6 @@
 // 姿勢參數 → 每個骨段的變換矩陣（相對於中立姿勢，世界座標）
 import * as THREE from 'three';
-import { SEGMENT_KEYS } from './segments.js';
+import { SEGMENT_KEYS, FINGERS } from './segments.js';
 import { NEUTRAL } from './presets.js';
 
 // 參數為 ±1 時的角度（度）
@@ -21,6 +21,19 @@ export const LIMITS = {
   supination: 10, // 前臂再旋後
   wristFlexion: 70, // 手腕屈曲
   wristExtension: 60, // 手腕伸展
+  kneeFlexion: 140, // 膝彎曲
+  kneeExtension: 15, // 膝過伸（示範用，比一般的 5–10° 大）
+  dorsiflexion: 20, // 踝背屈
+  plantarflexion: 45, // 踝蹠屈
+  inversion: 30, // 足內翻
+  eversion: 25, // 足外翻（示範用，比一般的 15–20° 大）
+};
+
+// 手指、拇指的三個關節在參數 ±1 時的角度（度）：四指為掌指、近端指間、遠端指間，拇指為腕掌、掌指、指間
+// +1 握拳／拇指屈曲到底；−1 四指的掌指關節過伸、拇指伸展
+export const FINGER_LIMITS = {
+  fingerFlexion: { flex: [90, 100, 70], extend: [20, 0, 0] },
+  thumbFlexion: { flex: [30, 50, 80], extend: [30, 0, 20] },
 };
 
 // 參數 → 角度（弧度）；正、負方向用不同的上限
@@ -97,10 +110,19 @@ export function computePose(joints, params = {}) {
   const pivotHip = p.pelvicObliquity >= 0 ? joints.hip.r : joints.hip.l;
   const pelvis = rotateAbout(hipMid, X, tilt).multiply(rotateAbout(pivotHip, Z, -obliquity));
   mats.set('pelvis', pelvis);
+  // 下肢：大腿跟著髖關節平移（長短腳）；小腿繞膝、距骨繞踝（背屈／蹠屈）、足繞距下關節（內翻／外翻）
+  // 轉軸的正方向＝膝彎曲、踝背屈、足內翻（見 tools/lib/joints.mjs）
   for (const s of ['l', 'r']) {
     const shift = vec(joints.hip[s]).applyMatrix4(pelvis).sub(vec(joints.hip[s]));
     const leg = new THREE.Matrix4().makeTranslation(shift.x, shift.y, shift.z);
-    for (const seg of ['femur', 'shank', 'foot']) mats.set(`${seg}.${s}`, leg);
+    const { knee, ankle, subtalar } = joints;
+    const shank = leg.clone().multiply(rotateAbout(knee[s].pivot, vec(knee[s].axis), jointAngle(p[`kneeFlexion.${s}`], LIMITS.kneeFlexion, LIMITS.kneeExtension)));
+    const talus = shank.clone().multiply(rotateAbout(ankle[s].pivot, vec(ankle[s].axis), jointAngle(p[`ankleFlexion.${s}`], LIMITS.dorsiflexion, LIMITS.plantarflexion)));
+    const foot = talus.clone().multiply(rotateAbout(subtalar[s].pivot, vec(subtalar[s].axis), jointAngle(p[`footInversion.${s}`], LIMITS.inversion, LIMITS.eversion)));
+    mats.set(`femur.${s}`, leg);
+    mats.set(`shank.${s}`, shank);
+    mats.set(`talus.${s}`, talus);
+    mats.set(`foot.${s}`, foot);
   }
 
   // 腰椎：五節平均反向轉回去
@@ -153,6 +175,17 @@ export function computePose(joints, params = {}) {
     mats.set(`ulna.${s}`, thoraxUp.clone().multiply(ulna));
     mats.set(`radius.${s}`, thoraxUp.clone().multiply(radius));
     mats.set(`hand.${s}`, thoraxUp.clone().multiply(hand));
+    // 手指：每節繞自己的關節轉（轉軸正方向＝屈曲），一個滑桿依比例帶動三個關節
+    const fingers = joints.fingers[s];
+    const bend = (parent, list, segs, param, limits) => {
+      let m = parent;
+      list.forEach((j, i) => {
+        m = m.clone().multiply(rotateAbout(j.pivot, vec(j.axis), jointAngle(p[`${param}.${s}`], limits.flex[i], limits.extend[i])));
+        mats.set(`${segs[i]}.${s}`, thoraxUp.clone().multiply(m));
+      });
+    };
+    for (const f of FINGERS) bend(hand, fingers[f], [`${f}Prox`, `${f}Mid`, `${f}Dist`], 'fingerFlexion', FINGER_LIMITS.fingerFlexion);
+    bend(hand, fingers.thumb, ['thumbMeta', 'thumbProx', 'thumbDist'], 'thumbFlexion', FINGER_LIMITS.thumbFlexion);
   }
   return mats;
 }

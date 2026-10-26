@@ -1,4 +1,4 @@
-// 下方姿勢列：預設姿勢（切換時播放動畫）、播放鍵、分組的關節滑桿（上肢可兩側一起或只調一側）
+// 下方姿勢列：預設姿勢（切換時播放動畫）、播放鍵、分組的關節滑桿（上肢、下肢可兩側一起或只調一側，兩組共用同一個設定）
 import { PRESETS, SLIDERS, SLIDER_GROUPS, SIDE_MODES, NEUTRAL, lerpParams, easeInOut, snapSlider, isNeutral, sliderValue, setSlider } from '../rig/presets.js';
 
 const DURATION = 1500; // 毫秒
@@ -18,9 +18,9 @@ export function initPostureBar(el, ctrl, content) {
     </div>
     <div class="slider-groups">
       ${SLIDER_GROUPS.map(([g, title]) => `
-        <fieldset class="slider-group">
+        <fieldset class="slider-group${SLIDERS.filter(s => s.group === g).length > 5 ? ' wide' : ''}">
           <legend>${title}</legend>
-          ${g === 'upperLimb' ? `<div class="side-modes">${SIDE_MODES.map(([k, label]) => `<button type="button" data-mode="${k}">${label}</button>`).join('')}</div>` : ''}
+          ${SLIDERS.some(s => s.group === g && s.sided) ? `<div class="side-modes">${SIDE_MODES.map(([k, label]) => `<button type="button" data-mode="${k}">${label}</button>`).join('')}</div>` : ''}
           ${SLIDERS.filter(s => s.group === g).map(slider).join('')}
         </fieldset>`).join('')}
     </div>
@@ -67,7 +67,7 @@ export function initPostureBar(el, ctrl, content) {
     for (const s of SLIDERS) el.querySelector(`[data-param="${s.key}"]`).value = sliderValue(params, s.key, mode);
     for (const b of el.querySelectorAll('[data-preset]')) b.classList.toggle('active', b.dataset.preset === active);
     for (const b of el.querySelectorAll('[data-mode]')) b.classList.toggle('active', b.dataset.mode === mode);
-    el.querySelector('.posture-note').textContent = active ? content.postures[active] : '自訂姿勢：拖動滑桿調整各關節；上肢可切換「兩側一起」或只調左側、右側。';
+    el.querySelector('.posture-note').textContent = active ? content.postures[active] : '自訂姿勢：拖動滑桿調整各關節；上肢、下肢可切換「兩側一起」或只調左側、右側。';
   }
   ctrl.onChange(sync);
   sync();

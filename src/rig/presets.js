@@ -2,7 +2,7 @@
 //
 // 分左右的參數存成 'scapProtraction.l'、'scapProtraction.r'；頭頸、胸椎、骨盆在身體中線，不分左右。
 
-export const SIDED_PARAMS = ['scapProtraction', 'scapElevation', 'shoulderRotation', 'elbowFlexion', 'forearmPronation', 'wristFlexion'];
+export const SIDED_PARAMS = ['scapProtraction', 'scapElevation', 'shoulderRotation', 'elbowFlexion', 'forearmPronation', 'wristFlexion', 'fingerFlexion', 'thumbFlexion', 'kneeFlexion', 'ankleFlexion', 'footInversion'];
 const MIDLINE_PARAMS = ['headForward', 'thoracicFlexion', 'pelvicTilt', 'pelvicObliquity'];
 
 export const NEUTRAL = Object.freeze({
@@ -29,10 +29,13 @@ export const PRESETS = {
   posteriorTilt: { label: '骨盆後傾', params: bilateral({ pelvicTilt: -1 }) },
   unevenShoulders: { label: '高低肩', params: bilateral({ 'scapElevation.r': 0.7, 'scapElevation.l': -0.3 }) },
   legLength: { label: '長短腳', params: bilateral({ pelvicObliquity: 1 }) },
-  phone: { label: '滑手機', params: bilateral({ headForward: 0.8, scapProtraction: 0.6, shoulderRotation: 0.4, elbowFlexion: 0.7, forearmPronation: 0.8, wristFlexion: 0.3 }) },
+  phone: { label: '滑手機', params: bilateral({ headForward: 0.8, scapProtraction: 0.6, shoulderRotation: 0.4, elbowFlexion: 0.7, forearmPronation: 0.8, wristFlexion: 0.3, fingerFlexion: 0.4, thumbFlexion: 0.5 }) },
+  kneeHyperextension: { label: '膝過伸', params: bilateral({ kneeFlexion: -1 }) },
+  highHeels: { label: '穿高跟鞋', params: bilateral({ ankleFlexion: -0.67 }) },
+  flatFoot: { label: '扁平足', params: bilateral({ footInversion: -1 }) },
 };
 
-// group：滑桿分組（前後方向／左右方向／上肢）
+// group：滑桿分組（前後方向／左右方向／上肢／下肢）
 export const SLIDERS = [
   { key: 'headForward', group: 'sagittal', sided: false, label: '頭頸前移', minLabel: '後收', maxLabel: '前移' },
   { key: 'thoracicFlexion', group: 'sagittal', sided: false, label: '胸椎伸展／屈曲', minLabel: '伸展', maxLabel: '駝背' },
@@ -44,12 +47,18 @@ export const SLIDERS = [
   { key: 'elbowFlexion', group: 'upperLimb', sided: true, label: '手肘伸直／彎曲', minLabel: '過伸', maxLabel: '彎曲' },
   { key: 'forearmPronation', group: 'upperLimb', sided: true, label: '前臂旋後／旋前', minLabel: '旋後', maxLabel: '旋前' },
   { key: 'wristFlexion', group: 'upperLimb', sided: true, label: '手腕伸展／屈曲', minLabel: '伸展', maxLabel: '屈曲' },
+  { key: 'fingerFlexion', group: 'upperLimb', sided: true, label: '手指伸直／握拳', minLabel: '過伸', maxLabel: '握拳' },
+  { key: 'thumbFlexion', group: 'upperLimb', sided: true, label: '拇指伸展／屈曲', minLabel: '伸展', maxLabel: '屈曲' },
+  { key: 'kneeFlexion', group: 'lowerLimb', sided: true, label: '膝伸直／彎曲', minLabel: '過伸', maxLabel: '彎曲' },
+  { key: 'ankleFlexion', group: 'lowerLimb', sided: true, label: '踝蹠屈／背屈', minLabel: '蹠屈', maxLabel: '背屈' },
+  { key: 'footInversion', group: 'lowerLimb', sided: true, label: '足外翻／內翻', minLabel: '外翻', maxLabel: '內翻' },
 ];
 
 export const SLIDER_GROUPS = [
   ['sagittal', '前後方向'],
   ['frontal', '左右方向'],
   ['upperLimb', '上肢（可分左右）'],
+  ['lowerLimb', '下肢（可分左右）'],
 ];
 
 // 分左右滑桿的調整方式

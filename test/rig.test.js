@@ -4,6 +4,21 @@ import * as THREE from 'three';
 import { computePose, ellipsoidLevel } from '../src/rig/rig.js';
 import { bilateral } from '../src/rig/presets.js';
 
+// 左側由右側鏡射：位置與方向的 x 變號；轉軸是旋轉向量，鏡射時 y、z 變號
+const mirrorPoint = p => [-p[0], p[1], p[2]];
+const mirrorAxis = a => [a[0], -a[1], -a[2]];
+const bothSides = r => ({ r, l: { pivot: mirrorPoint(r.pivot), axis: mirrorAxis(r.axis) } });
+// 手指：直直往下的三節，轉軸正方向＝屈曲（四指往前、拇指往內側）
+const finger = (x, axis) => [80, 76, 72].map(y => ({ pivot: [x, y, 4], axis, dir: [0, -1, 0] }));
+const FINGERS_R = { index: finger(-30, [-1, 0, 0]), middle: finger(-27.5, [-1, 0, 0]), ring: finger(-25.5, [-1, 0, 0]), little: finger(-23.5, [-1, 0, 0]), thumb: finger(-31, [0, 0, 1]) };
+const mirrorFingers = f => Object.fromEntries(Object.entries(f).map(([k, list]) => [k, list.map(j => ({ pivot: mirrorPoint(j.pivot), axis: mirrorAxis(j.axis), dir: j.dir }))]));
+const LEG_AND_FINGERS = {
+  knee: bothSides({ pivot: [-7.4, 46, -3.2], axis: [1, 0, 0] }),
+  ankle: bothSides({ pivot: [-7.4, 7.4, -4.6], axis: [-0.88, -0.44, -0.17] }),
+  subtalar: bothSides({ pivot: [-7.2, 6.7, -3.5], axis: [0.23, 0.67, 0.71] }),
+  fingers: { r: FINGERS_R, l: mirrorFingers(FINGERS_R) },
+};
+
 // 合成的關節資料（數值接近真實模型；右側在 −x）
 const J = {
   sc: { r: [-2, 140, 3], l: [2, 140, 3] },
@@ -16,6 +31,7 @@ const J = {
   elbowAxis: { r: [[-18.5, 110.7, -3.6], [-24.8, 111.1, -4.2]], l: [[18.5, 110.7, -3.6], [24.8, 111.1, -4.2]] },
   forearmAxis: { r: [[-23.9, 108.7, -3.2], [-24.8, 86.3, 1.4]], l: [[23.9, 108.7, -3.2], [24.8, 86.3, 1.4]] },
   wrist: { r: [-26.4, 85.1, 2], l: [26.4, 85.1, 2] },
+  ...LEG_AND_FINGERS,
   pivots: {
     L5: [0, 95.8, 0.2], L4: [0, 99.7, 0.9], L3: [0, 103.3, 1.2], L2: [0, 106.8, 0.9], L1: [0, 110.2, 0.2],
     thoraxLow: [0, 113.7, -0.5], thoraxMid: [0, 125.5, -3.4], thoraxUp: [0, 136, -3.6],
@@ -120,4 +136,58 @@ test('只彎右手肘：左手不動', () => {
   const mats = computePose(J, { 'elbowFlexion.r': 1 });
   assert.ok(!isIdentity(mats.get('ulna.r')));
   for (const k of ['ulna.l', 'radius.l', 'hand.l']) assert.ok(isIdentity(mats.get(k)), k);
+});
+
+test('膝彎曲：小腿往後、往上，大腿不動，左右對稱；距骨與足跟著小腿', () => {
+  const mats = computePose(J, bilateral({ kneeFlexion: 0.6 })); // 84°
+  const ankle = s => J.ankle[s].pivot;
+  const r = at(mats, 'shank.r', ankle('r')), l = at(mats, 'shank.l', ankle('l'));
+  assert.ok(r.z < ankle('r')[2] - 20 && r.y > ankle('r')[1] + 20, `右踝 ${r.toArray()}`);
+  assert.ok(Math.abs(r.z - l.z) < 1e-6 && Math.abs(r.x + l.x) < 1e-6);
+  assert.ok(isIdentity(mats.get('femur.r')));
+  assert.ok(at(mats, 'foot.r', ankle('r')).distanceTo(r) < 1e-6);
+});
+
+test('踝背屈：前足往上，小腿不動；蹠屈相反', () => {
+  const forefoot = [-8, 3, 12];
+  const up = computePose(J, bilateral({ ankleFlexion: 1 }));
+  assert.ok(at(up, 'foot.r', forefoot).y > forefoot[1] + 3);
+  assert.ok(isIdentity(up.get('shank.r')));
+  assert.ok(at(computePose(J, bilateral({ ankleFlexion: -1 })), 'foot.r', forefoot).y < forefoot[1] - 3);
+});
+
+test('足內翻：足底轉向內側（內側緣比外側緣高），外翻相反；左右對稱', () => {
+  // 距下關節的轉軸是斜的，內翻同時帶一點內收、蹠屈，所以看足底的傾斜（內側緣減外側緣的高度）
+  const edges = s => [[s === 'r' ? -3.5 : 3.5, 1, 6], [s === 'r' ? -12 : 12, 1, 5]];
+  const tilt = (mats, s) => {
+    const [med, lat] = edges(s).map(p => at(mats, `foot.${s}`, p).y);
+    return med - lat;
+  };
+  const inv = computePose(J, bilateral({ footInversion: 1 }));
+  assert.ok(tilt(inv, 'r') > 2, `內翻傾斜 ${tilt(inv, 'r')}`);
+  assert.ok(Math.abs(tilt(inv, 'r') - tilt(inv, 'l')) < 1e-6);
+  assert.ok(isIdentity(inv.get('talus.r')), '距下關節只轉足部，距骨不動');
+  assert.ok(tilt(computePose(J, bilateral({ footInversion: -1 })), 'r') < -2);
+});
+
+test('握拳：四指的指尖往掌側（前方）彎，手與拇指不動', () => {
+  const mats = computePose(J, bilateral({ fingerFlexion: 0.5 })); // 半握：三個關節合計 130°（握到底時指尖會捲回掌心）
+  const tip = [-30, 69, 4];
+  assert.ok(at(mats, 'indexDist.r', tip).z > tip[2] + 5);
+  assert.ok(at(mats, 'indexDist.l', mirrorPoint(tip)).z > tip[2] + 5);
+  assert.ok(isIdentity(mats.get('hand.r')) && isIdentity(mats.get('thumbDist.r')));
+});
+
+test('拇指屈曲：拇指尖往小指側（內側）移動，四指不動', () => {
+  const mats = computePose(J, bilateral({ thumbFlexion: 1 }));
+  const tip = [-31, 69, 4];
+  assert.ok(at(mats, 'thumbDist.r', tip).x > tip[0] + 3, '右手的內側在 +x');
+  assert.ok(at(mats, 'thumbDist.l', mirrorPoint(tip)).x < -tip[0] - 3, '左手的內側在 −x');
+  assert.ok(isIdentity(mats.get('indexProx.r')));
+});
+
+test('只彎右膝：左腳不動', () => {
+  const mats = computePose(J, { 'kneeFlexion.r': 1 });
+  assert.ok(!isIdentity(mats.get('shank.r')));
+  for (const k of ['shank.l', 'talus.l', 'foot.l']) assert.ok(isIdentity(mats.get(k)), k);
 });
