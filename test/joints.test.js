@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fitSphere, extremeCentroid, topSlab, bottomSlab, meanOf, vertebraPivot, boxEllipsoid } from '../tools/lib/joints.mjs';
+import { fitSphere, extremeCentroid, topSlab, bottomSlab, meanOf, vertebraPivot, boxEllipsoid, orient, boneHead } from '../tools/lib/joints.mjs';
 
 test('球面擬合找回球心與半徑', () => {
   const pts = [];
@@ -36,4 +36,15 @@ test('椎骨轉軸取椎體（最前方 2 公分）', () => {
 
 test('外框橢球', () => {
   assert.deepEqual(boxEllipsoid(new Float32Array([-1, 0, 2, 3, 4, 6])), { center: [1, 2, 4], radii: [2, 2, 2] });
+});
+
+test('轉軸正方向：lever 繞軸正向轉時要往 toward 移動，否則把軸反過來', () => {
+  // 繞 +x 轉時，往下的 lever 會往 −z 移動
+  assert.deepEqual(orient([1, 0, 0], [0, -1, 0], [0, 0, -1]), [1, 0, 0]);
+  assert.deepEqual(orient([1, 0, 0], [0, -1, 0], [0, 0, 1]), [-1, -0, -0]);
+});
+
+test('骨頭遠端：沿「base → 骨頭中心」方向最遠的一批頂點', () => {
+  const bone = new Float32Array(Array.from({ length: 20 }, (_, i) => [0, -i, 0]).flat());
+  assert.deepEqual(boneHead(bone, [0, 1, 0]), [0, -18, 0]); // 最遠的 3 個頂點（15%）：y = −17、−18、−19
 });

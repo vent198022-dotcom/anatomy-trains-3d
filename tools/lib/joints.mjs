@@ -103,7 +103,58 @@ export function meanOf(points) {
   return c;
 }
 
+const sub = (p, q) => p.map((v, i) => v - q[i]);
+const dot = (p, q) => p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
+const cross = (p, q) => [p[1] * q[2] - p[2] * q[1], p[2] * q[0] - p[0] * q[2], p[0] * q[1] - p[1] * q[0]];
+const unit = p => p.map(v => v / (Math.hypot(...p) || 1));
+const mid = (p, q) => p.map((v, i) => (v + q[i]) / 2);
+
+// 讓轉軸的正方向對應解剖上的正向動作：從轉動中心指向遠端的 lever 繞 axis 正向轉時，要往 toward 移動
+export function orient(axis, lever, toward) {
+  return dot(cross(axis, lever), toward) < 0 ? axis.map(v => -v) : axis;
+}
+
+// 骨頭遠端（關節頭）：沿「base → 骨頭中心」方向最遠的 15% 頂點平均
+export function boneHead(points, base) {
+  return extremeCentroid(points, unit(sub(meanOf(points), base)), 0.15);
+}
+
 const RIB_NAMES = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh', 'Eighth'];
+const ORDINAL = ['First', 'Second', 'Third', 'Fourth', 'Fifth'];
+export const FINGER_NAMES = ['index', 'middle', 'ring', 'little']; // 第二到五指
+
+// 手指的關節：{ pivot, axis, dir }；四指依序為掌指、近端指間、遠端指間，拇指為腕掌、掌指、指間
+// 轉軸的正方向＝屈曲（四指往掌側、拇指往小指側）；dir 是該關節往遠端的方向
+function fingerJoints(need, s, medial, mediolateral) {
+  const phalanx = (kind, n) => need(`${kind} phalanx of ${ORDINAL[n - 1].toLowerCase()} finger of hand.${s}`);
+  const metacarpal = n => need(`${ORDINAL[n - 1]} metacarpal bone.${s}`);
+  // bones：由近到遠的骨頭；第一個關節在 bones[0] 的近端（base）或它的頭
+  const chain = (pivots, tip, axisFor, toward) =>
+    pivots.map((pivot, i) => {
+      const dir = unit(sub(pivots[i + 1] ?? tip, pivot));
+      return { pivot, axis: orient(axisFor(dir), dir, toward), dir };
+    });
+  const out = {};
+  FINGER_NAMES.forEach((name, i) => {
+    const n = i + 2;
+    const mc = metacarpal(n);
+    const mcp = boneHead(mc, meanOf(topSlab(mc, 1)));
+    const pip = boneHead(phalanx('Proximal', n), mcp);
+    const dip = boneHead(phalanx('Middle', n), pip);
+    const tip = boneHead(phalanx('Distal', n), dip);
+    // 四指：與手腕平行的內外側軸（去掉沿手指的分量）；屈曲時往掌側（前方）
+    const axisFor = dir => unit(sub(mediolateral, dir.map(v => v * dot(mediolateral, dir))));
+    out[name] = chain([mcp, pip, dip], tip, axisFor, [0, 0, 1]);
+  });
+  const mc1 = metacarpal(1);
+  const cmc = meanOf(topSlab(mc1, 0.8));
+  const mcp = boneHead(mc1, cmc);
+  const ip = boneHead(phalanx('Proximal', 1), mcp);
+  const tip = boneHead(phalanx('Distal', 1), ip);
+  // 拇指：屈曲時跨過掌心往小指側，轉軸與拇指、內外側方向都垂直（大致前後方向）
+  out.thumb = chain([cmc, mcp, ip], tip, dir => unit(cross(dir, medial)), medial);
+  return out;
+}
 
 // geo：骨頭名稱 → 世界座標頂點（Float32Array）
 export function estimateJoints(geo) {
@@ -112,7 +163,7 @@ export function estimateJoints(geo) {
     if (!p) throw new Error(`估算關節需要的骨頭 ${name} 不存在`);
     return p;
   };
-  const joints = { sc: {}, ac: {}, gh: {}, elbow: {}, scapAnchor: {}, elbowAxis: {}, forearmAxis: {}, wrist: {} };
+  const joints = { sc: {}, ac: {}, gh: {}, elbow: {}, scapAnchor: {}, elbowAxis: {}, forearmAxis: {}, wrist: {}, fingers: {}, knee: {}, ankle: {}, subtalar: {} };
   for (const s of ['l', 'r']) {
     const medial = [s === 'r' ? 1 : -1, 0, 0];
     const lateral = [-medial[0], 0, 0];
@@ -132,6 +183,27 @@ export function estimateJoints(geo) {
     joints.forearmAxis[s] = [meanOf(topSlab(radius, 1.5)), ulnarHead];
     // 手腕屈伸：轉動中心在頭狀骨頭部（頭狀骨最上方 1 公分的平均位置）
     joints.wrist[s] = meanOf(topSlab(need(`Capitate bone.${s}`), 1));
+    joints.fingers[s] = fingerJoints(need, s, medial, unit(sub(joints.elbowAxis[s][1], joints.elbowAxis[s][0])));
+
+    // 膝屈伸：股骨遠端 6 公分內最內、最外側的頂點（股骨內、外上髁）；正方向＝小腿往後
+    const femur = need(`Femur.${s}`), tibia = need(`Tibia.${s}`), fibula = need(`Fibula.${s}`);
+    const distalFemur = bottomSlab(femur, 6);
+    const [kneeMed, kneeLat] = [extremeCentroid(distalFemur, medial, 0.03), extremeCentroid(distalFemur, lateral, 0.03)];
+    joints.knee[s] = { pivot: mid(kneeMed, kneeLat), axis: orient(unit(sub(kneeLat, kneeMed)), [0, -1, 0], [0, 0, -1]) };
+    // 踝背屈／蹠屈：通過內、外踝尖（脛骨最下方 2 公分最內側、腓骨最下方 1 公分）；正方向＝背屈（前足往上）
+    const medMalleolus = extremeCentroid(bottomSlab(tibia, 2), medial, 0.05);
+    const latMalleolus = meanOf(bottomSlab(fibula, 1));
+    joints.ankle[s] = { pivot: mid(medMalleolus, latMalleolus), axis: orient(unit(sub(latMalleolus, medMalleolus)), [0, 0, 1], [0, 1, 0]) };
+    // 距下關節（內翻／外翻）：通過距骨中心，從足部長軸往上 42°、往內 23°（文獻平均）；正方向＝內翻（足底轉向內側）
+    const heel = extremeCentroid(need(`Calcaneus.${s}`), [0, 0, -1], 0.05);
+    const forefoot = extremeCentroid(need(`Second metatarsal bone.${s}`), [0, 0, 1], 0.05);
+    const footDir = unit([forefoot[0] - heel[0], 0, forefoot[2] - heel[2]]);
+    let inward = unit(cross([0, 1, 0], footDir));
+    if (dot(inward, medial) < 0) inward = inward.map(v => -v);
+    const rad = d => (d * Math.PI) / 180;
+    const horizontal = unit(footDir.map((v, i) => v * Math.cos(rad(23)) + inward[i] * Math.sin(rad(23))));
+    const subtalarAxis = unit(horizontal.map((v, i) => v * Math.cos(rad(42)) + [0, 1, 0][i] * Math.sin(rad(42))));
+    joints.subtalar[s] = { pivot: meanOf(need(`Talus.${s}`)), axis: orient(subtalarAxis, medial, [0, 1, 0]) };
   }
   // 脊椎各骨段的轉軸：該骨段最下方那節椎體的下緣；頭段在寰椎上緣
   joints.pivots = {
