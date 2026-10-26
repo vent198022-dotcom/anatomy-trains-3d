@@ -12,7 +12,9 @@
 
 ## 使用
 
-雙擊 `解剖列車網頁/index.html`，用 Chrome 或 Edge 開啟，不需要網路。操作方式見 `解剖列車網頁/使用說明.txt`。
+線上版：https://vent198022-dotcom.github.io/anatomy-trains-3d/
+
+離線使用：雙擊 `解剖列車網頁/index.html`，用 Chrome 或 Edge 開啟，不需要網路。操作方式見 `解剖列車網頁/使用說明.txt`。
 
 ## 修改說明文字
 
