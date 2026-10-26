@@ -26,12 +26,18 @@ const CHECKS = {
   unevenShoulders: { short: ['trapUpper.r', 'levatorScapulae.r'], long: ['trapUpper.l'] },
   legLength: { short: ['quadratusLumborum.r', 'gluteusMedius.l'], long: ['quadratusLumborum.l', 'gluteusMedius.r'] },
   phone: {
-    short: ['bicepsShort', 'brachialis', 'brachioradialis', 'pronatorTeresHum', 'pronatorQuadratus', 'flexorCarpiRadialis', 'rectusCapPostMinor'],
-    long: ['tricepsMed', 'anconeus', 'supinator', 'extensorDigitorum', 'ecuHumeral', 'rhomboidMinor'],
+    short: ['bicepsShort', 'brachialis', 'brachioradialis', 'pronatorTeresHum', 'pronatorQuadratus', 'flexorCarpiRadialis', 'rectusCapPostMinor', 'adductorPollicisObl', 'flexorPollicisBrevisSup'],
+    long: ['tricepsMed', 'anconeus', 'supinator', 'extensorDigitorum', 'ecuHumeral', 'rhomboidMinor', 'extensorPollicisBrevis'],
   },
+  kneeHyperextension: { short: ['vastusMedialis'], long: ['popliteus'] },
+  highHeels: {
+    short: ['gastrocnemiusMed', 'gastrocnemiusLat', 'soleus', 'plantaris'],
+    long: ['tibialisAnterior', 'extensorHallucisLongus', 'extensorDigitorumLongus', 'fibularisTertius'],
+  },
+  flatFoot: { short: ['fibularisTertius'], long: ['flexorDigitorumLongus'] },
 };
 
-// 上肢單一關節（自訂姿勢的滑桿推到底）
+// 上、下肢單一關節（自訂姿勢的滑桿推到底）
 const JOINT_CHECKS = {
   手肘彎曲: {
     params: bilateral({ elbowFlexion: 1 }),
@@ -47,6 +53,31 @@ const JOINT_CHECKS = {
     params: bilateral({ wristFlexion: 1 }),
     short: ['flexorCarpiRadialis', 'palmarisLongus', 'fdsRadial', 'flexorPollicisLongus'],
     long: ['extensorDigitorum', 'extensorDigitiMinimi', 'extensorPollicisLongus', 'extensorIndicis'],
+  },
+  握拳: {
+    params: bilateral({ fingerFlexion: 1 }),
+    short: ['fdsHumeroUlnar', 'flexorDigitorumProfundus', 'palmarInterossei', 'flexorDigitiMinimi'],
+    long: ['extensorDigitorum', 'extensorIndicis'],
+  },
+  拇指屈曲: {
+    params: bilateral({ thumbFlexion: 1 }),
+    short: ['flexorPollicisLongus', 'adductorPollicisObl', 'opponensPollicis', 'flexorPollicisBrevisSup'],
+    long: ['extensorPollicisBrevis', 'extensorPollicisLongus'],
+  },
+  膝彎曲: {
+    params: bilateral({ kneeFlexion: 1 }),
+    short: ['semitendinosus', 'semimembranosus', 'bicepsFemorisLong', 'bicepsFemorisShort', 'gracilis', 'sartorius', 'gastrocnemiusMed', 'gastrocnemiusLat'],
+    long: ['rectusFemoris', 'vastusLateralis', 'vastusMedialis', 'vastusIntermedius'],
+  },
+  踝背屈: {
+    params: bilateral({ ankleFlexion: 1 }),
+    short: ['tibialisAnterior', 'extensorHallucisLongus', 'fibularisTertius'],
+    long: ['gastrocnemiusMed', 'gastrocnemiusLat', 'soleus'],
+  },
+  足內翻: {
+    params: bilateral({ footInversion: 1 }),
+    short: ['tibialisPosterior', 'flexorDigitorumLongus'],
+    long: ['fibularisBrevis', 'fibularisTertius', 'extensorDigitorumLongus'],
   },
 };
 const keys = name => (/\.[lr]$/.test(name) ? [name] : [`${name}.l`, `${name}.r`]);
