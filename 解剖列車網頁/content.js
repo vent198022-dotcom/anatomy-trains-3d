@@ -829,7 +829,6 @@ Object.assign(window.CONTENT.muscles, {
 });
 
 // ── 臀部、髖、大腿、小腿（2A） ──
-const KNEE_FIXED = '2A 沒有膝、踝關節，只跨過膝或踝的肌肉長度不會隨姿勢改變。';
 Object.assign(window.CONTENT.muscles, {
   gluteusMaximus: {
     name: '臀大肌', en: 'Gluteus maximus', latin: 'Musculus gluteus maximus',
@@ -861,7 +860,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '髖關節屈曲、外展、內旋；繃緊髂脛束', nerve: '臀上神經（L4–S1）', lines: ['體側線', '螺旋線'],
     lockedShort: '骨盆前傾、久坐、跑步量大', lockedLong: '骨盆後傾',
     painPoints: '髂前上棘下方、大腿前外側上段', referredPain: '髖部前外側，沿大腿外側到膝蓋',
-    notes: '',
+    notes: '模型的網格止於大腿上段（往下由髂脛束接續），長度只反映髖部姿勢。',
   },
   iliotibialTract: {
     name: '髂脛束', en: 'Iliotibial tract', latin: 'Tractus iliotibialis',
@@ -941,7 +940,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '髖關節屈曲、外展、外旋；膝關節屈曲（盤腿動作）', nerve: '股神經（L2–L3）', lines: ['同側功能線'],
     lockedShort: '骨盆前傾、長期盤腿', lockedLong: '骨盆後傾',
     painPoints: '大腿前面，沿肌肉斜線分布', referredPain: '大腿前內側的表淺刺痛',
-    notes: '',
+    notes: '鵝足肌腱繞過股骨內髁到脛骨前內側，由頂點位置算不出屈膝的力臂，改用文獻值（約 1.5 公分）。',
   },
   rectusFemoris: {
     name: '股直肌', en: 'Rectus femoris', latin: 'Musculus rectus femoris',
@@ -949,7 +948,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '膝關節伸直；髖關節屈曲', nerve: '股神經（L2–L4）', lines: ['淺前線'],
     lockedShort: '骨盆前傾、久坐', lockedLong: '骨盆後傾、跪坐',
     painPoints: '大腿前面上段、髂前下棘下方', referredPain: '膝蓋前面、髕骨周圍（膝蓋深處痛）',
-    notes: '依幾何計算，膝蓋伸直時骨盆前傾只讓股直肌縮短約 1%；它跨過膝關節，膝彎曲時才會明顯拉長。2A 沒有膝關節。',
+    notes: '依幾何計算，膝蓋伸直時骨盆前傾只讓股直肌縮短約 1%；它跨過膝關節，膝彎曲時明顯拉長（彎到底約 +22%）。',
   },
   vastusLateralis: {
     name: '股外側肌', en: 'Vastus lateralis', latin: 'Musculus vastus lateralis',
@@ -957,7 +956,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '膝關節伸直', nerve: '股神經（L2–L4）', lines: ['淺前線', '後功能線'],
     lockedShort: '長期膝過伸站姿', lockedLong: '長期屈膝',
     painPoints: '大腿外側，從上到下多處', referredPain: '大腿外側、膝蓋外側，走路時膝外側痛',
-    notes: KNEE_FIXED,
+    notes: '只跨過膝關節；膝彎曲時被拉長，膝過伸時縮短。',
   },
   vastusMedialis: {
     name: '股內側肌', en: 'Vastus medialis', latin: 'Musculus vastus medialis',
@@ -965,7 +964,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '膝關節伸直；穩定髕骨', nerve: '股神經（L2–L4）', lines: ['淺前線'],
     lockedShort: '長期膝過伸站姿', lockedLong: '長期屈膝',
     painPoints: '膝蓋內上方的肌腹（淚滴狀）', referredPain: '膝蓋前內側',
-    notes: KNEE_FIXED,
+    notes: '只跨過膝關節；膝彎曲時被拉長，膝過伸時縮短。',
   },
   vastusIntermedius: {
     name: '股中間肌', en: 'Vastus intermedius', latin: 'Musculus vastus intermedius',
@@ -973,7 +972,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '膝關節伸直', nerve: '股神經（L2–L4）', lines: ['淺前線'],
     lockedShort: '長期膝過伸站姿', lockedLong: '長期屈膝',
     painPoints: '大腿前面中段深處（股直肌下面）', referredPain: '大腿前面、膝蓋上方；上樓梯困難',
-    notes: KNEE_FIXED,
+    notes: '只跨過膝關節；膝彎曲時被拉長，膝過伸時縮短。',
   },
   patellarRetinaculumMed: {
     name: '髕骨內側支持帶', en: 'Medial patellar retinaculum', latin: 'Retinaculum patellae mediale',
@@ -1029,7 +1028,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '髖關節內收；膝關節屈曲、內旋', nerve: '閉孔神經（L2–L3）', lines: [],
     lockedShort: '長期翹腳', lockedLong: '髖外展、膝伸直',
     painPoints: '大腿內側中段的表淺細長肌腹', referredPain: '大腿內側的表淺灼熱刺痛',
-    notes: '在列車線中的歸屬請對照書本確認。',
+    notes: '在列車線中的歸屬請對照書本確認；屈膝的力臂改用文獻值（約 2 公分），理由同縫匠肌。',
   },
   pectineus: {
     name: '恥骨肌', en: 'Pectineus', latin: 'Musculus pectineus',
@@ -1053,7 +1052,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '膝關節屈曲、外旋', nerve: '坐骨神經腓側部（L5–S2）', lines: [],
     lockedShort: '久坐（膝彎曲）', lockedLong: '長期膝過伸',
     painPoints: '大腿後外側下段深處', referredPain: '膝蓋後外側',
-    notes: KNEE_FIXED,
+    notes: '只跨過膝關節（短頭不跨髖）。',
   },
   semitendinosus: {
     name: '半腱肌', en: 'Semitendinosus', latin: 'Musculus semitendinosus',
@@ -1077,7 +1076,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '踝關節蹠屈（踮腳）；膝關節屈曲', nerve: '脛神經（S1–S2）', lines: ['淺背線'],
     lockedShort: '常穿高跟鞋、長期踮腳', lockedLong: '長期蹲姿、膝過伸',
     painPoints: '小腿後內側上段的肌腹', referredPain: '腳底內側足弓、小腿後面；夜間小腿抽筋',
-    notes: KNEE_FIXED,
+    notes: '同時跨過膝與踝：膝彎曲時變短、踝背屈時拉長。',
   },
   gastrocnemiusLat: {
     name: '腓腸肌外側頭', en: 'Gastrocnemius, lateral head', latin: 'Caput laterale musculi gastrocnemii',
@@ -1085,7 +1084,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '踝關節蹠屈；膝關節屈曲', nerve: '脛神經（S1–S2）', lines: ['淺背線'],
     lockedShort: '常穿高跟鞋、長期踮腳', lockedLong: '長期蹲姿、膝過伸',
     painPoints: '小腿後外側上段的肌腹', referredPain: '膝蓋後面、小腿後外側',
-    notes: KNEE_FIXED,
+    notes: '同時跨過膝與踝：膝彎曲時變短、踝背屈時拉長。',
   },
   calcanealTendon: {
     name: '跟腱', en: 'Calcaneal (Achilles) tendon', latin: 'Tendo calcaneus',
@@ -1101,7 +1100,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '踝關節蹠屈；站立時防止身體往前倒', nerve: '脛神經（S1–S2）', lines: [],
     lockedShort: '常穿高跟鞋', lockedLong: '長期蹲姿',
     painPoints: '小腿後面下段、跟腱上方兩側', referredPain: '腳跟（類似足底筋膜炎的腳跟痛）、薦髂關節',
-    notes: KNEE_FIXED,
+    notes: '只跨過踝關節；模型的網格止於跟腱上方，力臂取最靠近踝的那一段。',
   },
   plantaris: {
     name: '蹠肌', en: 'Plantaris', latin: 'Musculus plantaris',
@@ -1109,7 +1108,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '輔助蹠屈與膝屈曲', nerve: '脛神經（S1–S2）', lines: [],
     lockedShort: '—', lockedLong: '—',
     painPoints: '膝蓋後外側', referredPain: '膝蓋後面、小腿上段',
-    notes: '約一成的人沒有此肌。' + KNEE_FIXED,
+    notes: '約一成的人沒有此肌。',
   },
   popliteus: {
     name: '膕肌', en: 'Popliteus', latin: 'Musculus popliteus',
@@ -1117,7 +1116,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '解鎖伸直的膝關節（膝屈曲起始時使脛骨內旋）', nerve: '脛神經（L4–S1）', lines: ['深前線'],
     lockedShort: '長期屈膝', lockedLong: '長期膝過伸',
     painPoints: '膝蓋後面（膕窩）內下方深處', referredPain: '膝蓋後面；下坡、下樓梯時膝後痛',
-    notes: KNEE_FIXED,
+    notes: '肌肉很短，膝彎曲時百分比變化很大；它主要是在膝伸直時「解鎖」（脛骨內旋），模型沒有膝的旋轉。',
   },
   tibialisPosterior: {
     name: '脛後肌', en: 'Tibialis posterior', latin: 'Musculus tibialis posterior',
@@ -1125,7 +1124,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '踝關節蹠屈、足內翻；支撐足弓', nerve: '脛神經（L4–L5）', lines: ['深前線'],
     lockedShort: '高足弓', lockedLong: '扁平足（足弓塌陷）',
     painPoints: '小腿後面深處（比目魚肌下面）', referredPain: '跟腱、腳跟、腳底',
-    notes: KNEE_FIXED,
+    notes: '肌腱繞過內踝後方往前到足舟骨，力臂只取踝關節近端那一段。',
   },
   flexorDigitorumLongus: {
     name: '屈趾長肌', en: 'Flexor digitorum longus', latin: 'Musculus flexor digitorum longus',
@@ -1133,7 +1132,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '屈曲第 2–5 趾；踝關節蹠屈、足內翻', nerve: '脛神經（L5–S2）', lines: ['深前線'],
     lockedShort: '長期抓地（腳趾用力）', lockedLong: '腳趾長期上翹',
     painPoints: '小腿後內側中段深處', referredPain: '腳底前半、腳趾底面',
-    notes: KNEE_FIXED,
+    notes: '腳趾關節沒有建模，長度只反映踝與距下關節。',
   },
   flexorHallucisLongus: {
     name: '屈拇長肌', en: 'Flexor hallucis longus', latin: 'Musculus flexor hallucis longus',
@@ -1141,7 +1140,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '屈曲拇趾；踝關節蹠屈；支撐內側足弓', nerve: '脛神經（L5–S2）', lines: ['深前線'],
     lockedShort: '長期踮腳、芭蕾舞者', lockedLong: '拇趾長期上翹',
     painPoints: '小腿後外側下段深處', referredPain: '拇趾底面、第一蹠骨頭',
-    notes: KNEE_FIXED,
+    notes: '腳趾關節沒有建模，長度只反映踝與距下關節。',
   },
   tibialisAnterior: {
     name: '脛前肌', en: 'Tibialis anterior', latin: 'Musculus tibialis anterior',
@@ -1149,7 +1148,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '踝關節背屈（勾腳）、足內翻；支撐內側足弓', nerve: '腓深神經（L4–L5）', lines: ['淺前線', '螺旋線'],
     lockedShort: '長期勾腳（例如開車時腳懸空）', lockedLong: '常穿高跟鞋、長期蹠屈',
     painPoints: '脛骨外側上段的肌腹', referredPain: '踝關節前內側、拇趾',
-    notes: KNEE_FIXED,
+    notes: '模型算出的距下關節力臂接近 0，內翻、外翻時長度幾乎不變（實際上是弱的內翻肌）。',
   },
   extensorDigitorumLongus: {
     name: '伸趾長肌', en: 'Extensor digitorum longus', latin: 'Musculus extensor digitorum longus',
@@ -1157,7 +1156,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '伸展第 2–5 趾；踝關節背屈、足外翻', nerve: '腓深神經（L4–S1）', lines: ['淺前線'],
     lockedShort: '腳趾長期上翹', lockedLong: '常穿高跟鞋',
     painPoints: '小腿前外側上段', referredPain: '腳背、第 2–4 趾背面',
-    notes: KNEE_FIXED,
+    notes: '腳趾關節沒有建模，長度只反映踝與距下關節。',
   },
   extensorDigitorumLongusTendon: {
     name: '伸趾長肌腱', en: 'Tendons of extensor digitorum longus', latin: 'Tendines musculi extensoris digitorum longi',
@@ -1173,7 +1172,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '伸展拇趾；踝關節背屈', nerve: '腓深神經（L4–L5）', lines: ['淺前線'],
     lockedShort: '拇趾長期上翹', lockedLong: '常穿高跟鞋',
     painPoints: '小腿前面下段（脛骨外側）', referredPain: '腳背內側、拇趾背面',
-    notes: KNEE_FIXED,
+    notes: '腳趾關節沒有建模，長度只反映踝與距下關節。',
   },
   fibularisTertius: {
     name: '第三腓骨肌', en: 'Fibularis (peroneus) tertius', latin: 'Musculus fibularis tertius',
@@ -1181,7 +1180,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '踝關節背屈、足外翻', nerve: '腓深神經（L5–S1）', lines: [],
     lockedShort: '—', lockedLong: '—',
     painPoints: '小腿前外側下段', referredPain: '踝前外側、腳跟外側',
-    notes: KNEE_FIXED,
+    notes: '',
   },
   fibularisLongus: {
     name: '腓骨長肌', en: 'Fibularis (peroneus) longus', latin: 'Musculus fibularis longus',
@@ -1189,7 +1188,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '足外翻、踝關節蹠屈；與脛前肌像「馬鐙」一樣托住足弓', nerve: '腓淺神經（L5–S1）', lines: ['體側線', '螺旋線'],
     lockedShort: '扁平足（足外翻）', lockedLong: '高足弓、足內翻、常扭傷腳踝',
     painPoints: '小腿外側上段、腓骨頭下方', referredPain: '外踝周圍、腳的外側緣',
-    notes: KNEE_FIXED,
+    notes: '肌腱繞過外踝後方、再經足底到第一蹠骨；模型算出的外翻力臂偏小（外翻 25° 時約 −2%）。',
   },
   fibularisBrevis: {
     name: '腓骨短肌', en: 'Fibularis (peroneus) brevis', latin: 'Musculus fibularis brevis',
@@ -1197,7 +1196,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '足外翻、踝關節蹠屈', nerve: '腓淺神經（L5–S1）', lines: ['體側線'],
     lockedShort: '扁平足', lockedLong: '足內翻、常扭傷腳踝',
     painPoints: '小腿外側下段', referredPain: '外踝周圍、腳的外側緣',
-    notes: KNEE_FIXED,
+    notes: '',
   },
   plantarAponeurosis: {
     name: '足底筋膜', en: 'Plantar aponeurosis', latin: 'Aponeurosis plantaris',
@@ -1273,7 +1272,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '屈曲第二到五指的近端指間關節與掌指關節；輔助手腕屈曲', nerve: '正中神經（C7–T1）', lines: ['淺前臂線'],
     lockedShort: '長時間握緊（方向盤、工具、手機），手指與手腕同時彎', lockedLong: '手腕與手指同時長時間伸直（撐地）',
     painPoints: '前臂掌側中段', referredPain: '中指、無名指、小指的掌面，像電到一樣竄到指尖',
-    notes: '模型沒有手指關節，長度只反映手肘、手腕與前臂旋轉。',
+    notes: '四指一起彎曲；跨多指的肌腱，手指關節的效果取各指的平均。',
   },
   fdsRadial: {
     name: '屈指淺肌橈骨頭', en: 'Flexor digitorum superficialis, radial head', latin: 'Caput radiale musculi flexoris digitorum superficialis',
@@ -1289,7 +1288,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '屈曲遠端指間關節（唯一能彎指尖的肌肉），也屈曲其他指關節與手腕', nerve: '食指、中指部分：前骨間神經（正中神經）；無名指、小指部分：尺神經（C8–T1）', lines: ['淺前臂線'],
     lockedShort: '長時間用指尖出力（打字、彈琴、抓握）', lockedLong: '手腕與手指同時長時間伸直',
     painPoints: '前臂掌側上段深處（尺骨旁）', referredPain: '手指掌面一路到指尖',
-    notes: '模型沒有手指關節，長度只反映手肘、手腕與前臂旋轉。',
+    notes: '四指一起彎曲；跨多指的肌腱，手指關節的效果取各指的平均。',
   },
   flexorPollicisLongus: {
     name: '屈拇長肌', en: 'Flexor pollicis longus', latin: 'Musculus flexor pollicis longus',
@@ -1345,7 +1344,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '伸展第二到五指；輔助手腕伸展', nerve: '後骨間神經（橈神經，C7–C8）', lines: ['淺後臂線'],
     lockedShort: '手指長期上翹（打字時手指懸空）、手腕伸展', lockedLong: '握拳合併手腕屈曲',
     painPoints: '前臂背側上段、外上髁下方 3–4 公分', referredPain: '前臂背側到手背，以及中指、無名指的背面',
-    notes: '模型沒有手指關節，長度只反映手肘、手腕與前臂旋轉。',
+    notes: '四指一起彎曲；跨多指的肌腱，手指關節的效果取各指的平均。',
   },
   extensorDigitiMinimi: {
     name: '伸小指肌', en: 'Extensor digiti minimi', latin: 'Musculus extensor digiti minimi',
@@ -1417,7 +1416,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '拇指外展（往掌心前方）；輔助對掌', nerve: '正中神經返支（C8–T1）', lines: ['深前臂線'],
     lockedShort: '拇指長期往前撐開（握大杯子）', lockedLong: '拇指長期貼著食指',
     painPoints: '大魚際（拇指根部掌側）外側', referredPain: '拇指外側、手腕掌側拇指側',
-    notes: '手指關節沒有建模，長度不會改變。',
+    notes: '',
   },
   flexorPollicisBrevisSup: {
     name: '屈拇短肌淺頭', en: 'Flexor pollicis brevis, superficial head', latin: 'Caput superficiale musculi flexoris pollicis brevis',
@@ -1425,7 +1424,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '屈曲拇指掌指關節；輔助對掌', nerve: '正中神經返支（C8–T1）', lines: ['深前臂線'],
     lockedShort: '拇指長期彎曲握持（握筆、滑手機）', lockedLong: '拇指長期伸直撐開',
     painPoints: '—', referredPain: '—',
-    notes: '手指關節沒有建模，長度不會改變。',
+    notes: '',
   },
   flexorPollicisBrevisDeep: {
     name: '屈拇短肌深頭', en: 'Flexor pollicis brevis, deep head', latin: 'Caput profundum musculi flexoris pollicis brevis',
@@ -1433,7 +1432,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '屈曲拇指掌指關節；輔助對掌', nerve: '尺神經深支（C8–T1）', lines: ['深前臂線'],
     lockedShort: '拇指長期彎曲握持', lockedLong: '拇指長期伸直撐開',
     painPoints: '—', referredPain: '—',
-    notes: '手指關節沒有建模，長度不會改變。',
+    notes: '深頭的網格很小，拇指屈曲時算出的長度變化不準。',
   },
   opponensPollicis: {
     name: '拇對掌肌', en: 'Opponens pollicis', latin: 'Musculus opponens pollicis',
@@ -1441,7 +1440,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '拇指對掌（把拇指轉向掌心，與其他指尖相碰）', nerve: '正中神經返支（C8–T1）', lines: ['深前臂線'],
     lockedShort: '長時間捏、握（握筆、滑手機、針線活）', lockedLong: '拇指長期往後撐開',
     painPoints: '大魚際中段，第一掌骨旁', referredPain: '拇指掌面、手腕掌側拇指側',
-    notes: '手指關節沒有建模，長度不會改變。',
+    notes: '',
   },
   adductorPollicisObl: {
     name: '內收拇肌斜頭', en: 'Adductor pollicis, oblique head', latin: 'Caput obliquum musculi adductoris pollicis',
@@ -1449,7 +1448,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '拇指內收（把拇指拉向手掌）', nerve: '尺神經深支（C8–T1）', lines: [],
     lockedShort: '拇指長期內收夾緊（夾著手機、捏東西）', lockedLong: '虎口長期撐開',
     painPoints: '虎口（拇指與食指之間的蹼）', referredPain: '拇指根部的掌側與背側、大魚際',
-    notes: '手指關節沒有建模，長度不會改變。',
+    notes: '',
   },
   adductorPollicisTrans: {
     name: '內收拇肌橫頭', en: 'Adductor pollicis, transverse head', latin: 'Caput transversum musculi adductoris pollicis',
@@ -1457,7 +1456,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '拇指內收', nerve: '尺神經深支（C8–T1）', lines: [],
     lockedShort: '拇指長期內收夾緊', lockedLong: '虎口長期撐開',
     painPoints: '—', referredPain: '—',
-    notes: '手指關節沒有建模，長度不會改變。',
+    notes: '',
   },
   abductorDigitiMinimi: {
     name: '小指外展肌', en: 'Abductor digiti minimi of hand', latin: 'Musculus abductor digiti minimi manus',
@@ -1465,7 +1464,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '小指外展', nerve: '尺神經深支（C8–T1）', lines: ['深後臂線'],
     lockedShort: '小指長期撐開（打字、彈琴）', lockedLong: '小指長期併攏',
     painPoints: '小魚際（手掌小指側）', referredPain: '小指外側',
-    notes: '手指關節沒有建模，長度不會改變。',
+    notes: '',
   },
   flexorDigitiMinimi: {
     name: '屈小指短肌', en: 'Flexor digiti minimi brevis of hand', latin: 'Musculus flexor digiti minimi brevis manus',
@@ -1473,7 +1472,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '屈曲小指掌指關節', nerve: '尺神經深支（C8–T1）', lines: ['深後臂線'],
     lockedShort: '小指長期彎曲握持', lockedLong: '手掌長時間攤平',
     painPoints: '—', referredPain: '—',
-    notes: '手指關節沒有建模，長度不會改變。',
+    notes: '',
   },
   opponensDigitiMinimi: {
     name: '小指對掌肌', en: 'Opponens digiti minimi', latin: 'Musculus opponens digiti minimi',
@@ -1481,7 +1480,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '小指對掌（把第五掌骨往前、往內轉，讓手掌成杯狀）', nerve: '尺神經深支（C8–T1）', lines: ['深後臂線'],
     lockedShort: '手掌長期握成杯狀', lockedLong: '手掌長時間攤平',
     painPoints: '—', referredPain: '—',
-    notes: '手指關節沒有建模，長度不會改變。',
+    notes: '只跨過第五腕掌關節，模型沒有這個關節，長度不會改變。',
   },
   lumbricalsHand: {
     name: '蚓狀肌', en: 'Lumbricals of hand', latin: 'Musculi lumbricales manus',
@@ -1489,7 +1488,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '屈曲掌指關節，同時伸直指間關節', nerve: '第一、二蚓狀肌：正中神經；第三、四蚓狀肌：尺神經深支（C8–T1）', lines: [],
     lockedShort: '長時間握持手機、書本（掌指關節彎、指頭伸直）', lockedLong: '握拳',
     painPoints: '—', referredPain: '—',
-    notes: '起點在屈指深肌腱上，模型以掌骨代替；手指關節沒有建模，長度不會改變。',
+    notes: '起點在屈指深肌腱上，模型以掌骨代替，所以握拳時顯示縮短；實際上握拳時屈指深肌腱往近端拉，蚓狀肌反而被拉長。',
   },
   palmarInterossei: {
     name: '掌側骨間肌', en: 'Palmar interossei', latin: 'Musculi interossei palmares',
@@ -1497,7 +1496,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '手指內收（往中指靠攏）；屈曲掌指關節、伸直指間關節', nerve: '尺神經深支（C8–T1）', lines: [],
     lockedShort: '手指長時間併攏握持', lockedLong: '手指長時間張開',
     painPoints: '—', referredPain: '—',
-    notes: '手指關節沒有建模，長度不會改變。',
+    notes: '',
   },
   dorsalInterosseiHand: {
     name: '背側骨間肌', en: 'Dorsal interossei of hand', latin: 'Musculi interossei dorsales manus',
@@ -1505,7 +1504,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '手指外展（離開中指）；屈曲掌指關節、伸直指間關節', nerve: '尺神經深支（C8–T1）', lines: [],
     lockedShort: '手指長時間張開出力（彈琴、打字）', lockedLong: '手指長時間併攏',
     painPoints: '手背掌骨之間', referredPain: '沿手指側面到遠端指間關節',
-    notes: '手指關節沒有建模，長度不會改變。',
+    notes: '',
   },
   medialIntermuscularSeptum: {
     name: '上臂內側肌間隔', en: 'Medial intermuscular septum of arm', latin: 'Septum intermusculare brachii mediale',
@@ -1574,7 +1573,10 @@ Object.assign(window.CONTENT.postures, {
   anteriorTilt: '骨盆前傾：骨盆繞髖關節往前轉 18°（示範用的較大幅度），腰椎前凸增加以維持上半身直立。髂肌、腰段豎脊肌、多裂肌鎖短；腹直肌、膕旁肌、臀大肌鎖長（下交叉症候群）。腰大肌、股直肌的長度變化很小，見各自的說明。',
   posteriorTilt: '骨盆後傾：骨盆往後轉 18°，腰椎變平。臀大肌、腹直肌鎖短；腰段豎脊肌、多裂肌鎖長。膕旁肌略縮短（約 3%）。',
   unevenShoulders: '高低肩：右肩上提、左肩下壓。右側上斜方肌、提肩胛肌鎖短；左側被拉長。也可以在下方切換「只調左側／只調右側」自己調整。',
-  phone: '滑手機：頭前傾、肩胛前伸、肩關節內旋，手肘彎曲約 100°、前臂旋前約 120°、手腕微屈。肱二頭肌、肱肌、肱橈肌、旋前圓肌、旋前方肌鎖短（橈側屈腕肌、掌長肌也跟著縮短）；肱三頭肌、肘肌、旋後肌與前臂伸肌群（伸指肌、尺側伸腕肌、橈側伸腕短肌）鎖長，枕下肌群也鎖短。淺後臂線在前臂整段被拉長，是網球肘、手腕背側痠痛常見的背景。',
+  phone: '滑手機：頭前傾、肩胛前伸、肩關節內旋，手肘彎曲約 100°、前臂旋前約 120°、手腕微屈，手指微彎握著手機、拇指屈曲。肱二頭肌、肱肌、肱橈肌、旋前圓肌、旋前方肌鎖短（橈側屈腕肌、掌長肌也跟著縮短）；肱三頭肌、肘肌、旋後肌與前臂伸肌群（伸指肌、尺側伸腕肌、橈側伸腕短肌）鎖長，枕下肌群也鎖短。握持的拇指讓內收拇肌、屈拇短肌、拇對掌肌鎖短，伸拇短肌鎖長。淺後臂線在前臂整段被拉長，是網球肘、手腕背側痠痛常見的背景。',
+  kneeHyperextension: '膝過伸（膝反張）：兩側膝關節過度伸直 15°（示範用，比一般的 5–10° 大）。股四頭肌的股內側、股中間、股外側肌鎖短，膕肌鎖長；膕旁肌、腓腸肌只被拉長約 1–2%（低於 3%，顯示灰色），臨床上常一起提到的是膝後側關節囊與韌帶被拉鬆。Kendall 的前凸型（骨盆前傾）與搖擺背型（骨盆後傾）姿勢都可能合併膝過伸，可以再用滑桿加上骨盆的方向。',
+  highHeels: '穿高跟鞋：兩側踝蹠屈約 30°。腓腸肌、比目魚肌、蹠肌鎖短（小腿後側連到跟腱）；脛前肌、伸趾長肌、伸拇長肌、第三腓骨肌鎖長。淺背線的小腿段縮短、淺前線的小腿段拉長。實際穿高跟鞋時常合併骨盆前傾、膝過伸，可以再用滑桿加上。',
+  flatFoot: '扁平足（足外翻）：兩側足部繞距下關節外翻 25°（示範用，比一般的 10–15° 大；模型的足部是一整塊，沒有足弓塌陷）。腓骨短肌、第三腓骨肌、伸趾長肌鎖短（腓骨長肌只縮短約 2%）；脛後肌、屈趾長肌鎖長——脛後肌長期被拉長、無力，是成人後天性扁平足常見的原因。螺旋線、深前線的足部段落受影響。',
   legLength: '長短腳（左腳短）：左側骨盆下降約 8°（約等於 2 公分），腰椎往右側彎代償，讓上半身維持直立；骨頭長度固定，所以用整條左腿下移來模擬較短的腿。右腰方肌、左臀中肌鎖短；左腰方肌、右臀中肌鎖長（體側線左右不對稱）。',
 });
 
