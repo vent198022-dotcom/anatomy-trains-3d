@@ -15,7 +15,7 @@ html, body { margin: 0; height: 100%; }
 body {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr) 320px;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto minmax(50vh, 1fr) auto auto; /* 3D 視窗至少佔頁面高度的一半 */
   grid-template-areas: 'top top top' 'left view info' 'posture posture posture' 'credit credit credit';
   background: var(--bg);
   color: var(--text);
@@ -24,7 +24,14 @@ body {
 #topbar { grid-area: top; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 8px 16px; border-bottom: 1px solid var(--line); }
 #topbar h1 { margin: 0 12px 0 0; font-size: 18px; font-weight: 600; }
 #lineBar, #viewBar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-#viewBar { margin-left: auto; }
+#lineBar button { padding: 3px 9px; flex: none; }
+/* 列車線維持一列：畫面窄時左右捲動，不往下換行擠掉 3D 視窗 */
+#topbar { flex-wrap: nowrap; }
+#lineBar { flex: 1; min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+#topbar h1, #lineBar .label { flex: none; white-space: nowrap; }
+/* 視角鈕浮在 3D 視窗右上角 */
+#viewBar { position: absolute; top: 10px; right: 12px; z-index: 1; justify-content: flex-end; }
+#viewBar button { padding: 2px 10px; background: rgba(14, 17, 22, 0.72); }
 #left { grid-area: left; overflow-y: auto; }
 #viewport { grid-area: view; position: relative; min-height: 0; overflow: hidden; }
 #viewport canvas { display: block; outline: none; }
@@ -37,7 +44,14 @@ body {
 #panPad .pan-down { grid-area: 3 / 2; }
 #panPad small { grid-area: 4 / 1 / 5 / 4; justify-self: end; margin-top: 4px; white-space: nowrap; font-size: 12px; color: var(--muted); }
 #info { grid-area: info; overflow-y: auto; }
-#postureBar { grid-area: posture; max-height: 38vh; overflow-y: auto; padding: 8px 16px; border-top: 1px solid var(--line); background: var(--panel); } /* 滑桿多，限制高度讓 3D 視窗保有空間 */
+#postureBar { grid-area: posture; padding: 8px 16px; border-top: 1px solid var(--line); background: var(--panel); }
+/* 關節滑桿平常收起；展開時最多佔 28% 高度，超過就在裡面捲動，3D 視窗仍保有一半以上 */
+#postureBar:not(.open) .slider-groups { display: none; }
+#postureBar .slider-groups { max-height: 28vh; overflow-y: auto; margin-top: 8px; }
+.joints-toggle { margin-left: auto; border-color: var(--accent); color: var(--accent); }
+@media (max-height: 820px) {
+  #postureBar .slider-groups { max-height: 22vh; } /* 矮的螢幕：滑桿區再小一點，免得整頁要捲動 */
+}
 #credit { grid-area: credit; margin: 0; padding: 4px 16px; font-size: 12px; color: var(--muted); }
 
 .panel { background: var(--panel); padding: 12px 14px; border-right: 1px solid var(--line); }
@@ -101,7 +115,7 @@ dd { margin: 0; }
 .slider-group.wide .side-modes { grid-column: 1 / -1; }
 .side-modes { display: flex; gap: 4px; margin: 2px 0 4px; }
 .side-modes button { padding: 0 8px; font-size: 13px; }
-.posture-note { margin: 6px 0 0; }
+.posture-note { margin: 2px 0 0; }
 
 @media (max-width: 900px) {
   body {
@@ -111,8 +125,10 @@ dd { margin: 0; }
     grid-template-areas: 'top' 'view' 'posture' 'info' 'left' 'credit';
   }
   .panel, #info.panel { border: 0; border-top: 1px solid var(--line); }
-  #viewBar { margin-left: 0; }
-  #postureBar { max-height: none; }
+  #postureBar .slider-groups { max-height: none; }
+  .joints-toggle { margin-left: 0; }
+  #topbar, #lineBar { flex-wrap: wrap; } /* 手機本來就要捲動頁面，列車線換行比左右捲動好找 */
+  #lineBar { flex-basis: 100%; overflow-x: visible; }
   .slider-group.wide { grid-column: auto; grid-template-columns: minmax(0, 1fr); }
   #panPad { bottom: 48px; } /* 窄畫面的圖例佔滿下緣，平移鍵移到它上面 */
   #panPad small { display: none; }

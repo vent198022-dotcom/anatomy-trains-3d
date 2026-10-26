@@ -1,7 +1,25 @@
-// 下方姿勢列：預設姿勢（切換時播放動畫）、播放鍵、分組的關節滑桿（上肢、下肢可兩側一起或只調一側，兩組共用同一個設定）
+// 下方姿勢列：預設姿勢（切換時播放動畫）、播放鍵、姿勢說明；分組的關節滑桿平常收起，按「調整關節」才展開
+// （上肢、下肢可兩側一起或只調一側，兩組共用同一個設定）
 import { PRESETS, SLIDERS, SLIDER_GROUPS, SIDE_MODES, NEUTRAL, lerpParams, easeInOut, snapSlider, isNeutral, sliderValue, setSlider } from '../rig/presets.js';
 
 const DURATION = 1500; // 毫秒
+const OPEN_KEY = 'anatomyTrains3d.jointsOpen'; // 滑桿是否展開（只存在這台電腦的瀏覽器）
+
+function loadOpen() {
+  try {
+    return localStorage.getItem(OPEN_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function saveOpen(open) {
+  try {
+    localStorage.setItem(OPEN_KEY, open ? '1' : '0');
+  } catch {
+    // 無法儲存時（例如瀏覽器封鎖）就不記
+  }
+}
 
 export function initPostureBar(el, ctrl, content) {
   let active = 'neutral'; // 目前的預設姿勢；拖過滑桿後為 null（自訂）
@@ -15,7 +33,9 @@ export function initPostureBar(el, ctrl, content) {
       <span class="label">姿勢</span>
       ${Object.entries(PRESETS).map(([k, p]) => `<button type="button" data-preset="${k}">${p.label}</button>`).join('')}
       <button type="button" data-play>▶ 播放</button>
+      <button type="button" class="joints-toggle" data-joints aria-expanded="false"></button>
     </div>
+    <p class="posture-note"></p>
     <div class="slider-groups">
       ${SLIDER_GROUPS.map(([g, title]) => `
         <fieldset class="slider-group${SLIDERS.filter(s => s.group === g).length > 5 ? ' wide' : ''}">
@@ -23,8 +43,15 @@ export function initPostureBar(el, ctrl, content) {
           ${SLIDERS.some(s => s.group === g && s.sided) ? `<div class="side-modes">${SIDE_MODES.map(([k, label]) => `<button type="button" data-mode="${k}">${label}</button>`).join('')}</div>` : ''}
           ${SLIDERS.filter(s => s.group === g).map(slider).join('')}
         </fieldset>`).join('')}
-    </div>
-    <p class="posture-note"></p>`;
+    </div>`;
+
+  const toggle = el.querySelector('[data-joints]');
+  function setOpen(open) {
+    el.classList.toggle('open', open);
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.textContent = open ? '收起關節 ▴' : '調整關節 ▾';
+  }
+  setOpen(loadOpen());
 
   function animate(from, to) {
     cancelAnimationFrame(frame);
@@ -49,6 +76,9 @@ export function initPostureBar(el, ctrl, content) {
       animate(NEUTRAL, PRESETS[active].params);
     } else if (btn.dataset.mode) {
       mode = btn.dataset.mode;
+    } else if ('joints' in btn.dataset) {
+      setOpen(!el.classList.contains('open'));
+      saveOpen(el.classList.contains('open'));
     }
     sync();
   });
