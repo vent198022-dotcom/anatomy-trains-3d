@@ -56,6 +56,11 @@ test('關節位置合理', () => {
   const [medial, lateral] = j.elbowAxis.r;
   assert.ok(medial[0] > lateral[0] && medial[1] > 105 && medial[1] < 116, `手肘轉軸 ${j.elbowAxis.r}`);
   assert.ok(j.wrist.r[1] > 80 && j.wrist.r[1] < 90 && j.wrist.r[1] < j.forearmAxis.r[1][1], `手腕 ${j.wrist.r}`);
+  assert.ok(j.knee.r.pivot[1] > 40 && j.knee.r.pivot[1] < 52 && j.knee.r.pivot[0] < 0, `膝 ${j.knee.r.pivot}`);
+  assert.ok(j.ankle.r.pivot[1] > 4 && j.ankle.r.pivot[1] < 12, `踝 ${j.ankle.r.pivot}`);
+  assert.ok(j.subtalar.r.pivot[1] < j.ankle.r.pivot[1], '距下關節在踝關節下方');
+  const tips = ['index', 'middle', 'ring', 'little'].map(f => j.fingers.r[f][0].pivot[1]);
+  assert.ok(tips.every(y => y > 70 && y < j.wrist.r[1]), `掌指關節 ${tips}`);
 });
 
 test('三角面與檔案大小在預算內', () => {
