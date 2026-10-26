@@ -83,6 +83,18 @@ test('前臂旋轉：一般照直線量；有旋轉力臂的肌肉，折線連�
   assert.ok(Math.abs(lengthDelta(wrapped, m) - 1 / L0) < 1e-9);
 });
 
+test('跨膝與踝的肌肉：兩個關節都鎖住，長度變化＝各關節 −力臂 × 轉角 的總和', () => {
+  const knee = new THREE.Matrix4().makeRotationX(0.5);
+  const ankle = knee.clone().multiply(new THREE.Matrix4().makeRotationX(0.3));
+  const m = new Map([['femur.r', I], ['shank.r', knee], ['talus.r', ankle], ['foot.r', ankle]]);
+  const p = {
+    side: 'r', segA: 'femur.r', segB: 'foot.r', a: [0, 40, 0], b: [0, 0, -5], vias: [],
+    wraps: [{ prox: 'femur.r', dist: 'shank.r', axis: [1, 0, 0], m: 2 }, { prox: 'shank.r', dist: 'talus.r', axis: [1, 0, 0], m: 4 }],
+  };
+  const L0 = Math.hypot(40, 5);
+  assert.ok(Math.abs(lengthDelta(p, m) - (L0 - 2 * 0.5 - 4 * 0.3) / L0 + 1) < 1e-9);
+});
+
 test('多骨段變形：依頂點權重混合兩個骨段', () => {
   const rest = new Float32Array([0, 0, 0, 1, 0, 0]);
   const skin = new Uint8Array([0, 1, 0, 0, 1, 255]); // 第一點完全跟骨段 0，第二點完全跟骨段 1

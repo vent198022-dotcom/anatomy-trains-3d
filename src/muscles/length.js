@@ -1,5 +1,6 @@
 // 肌肉長度：起點 →（轉折點，可多個）→ 止點的折線長，與中立姿勢比較
 import * as THREE from 'three';
+import { LIMB_PARENT, splitKey } from '../rig/segments.js';
 
 // 用 THREE.Matrix4 的 elements（行優先存成列優先陣列）變換一個點
 export function transformPoint(e, p) {
@@ -40,23 +41,35 @@ export function jointAngleOf(prox, dist, axis) {
   return Math.atan2(k.dot(e.clone().cross(turned)), e.dot(turned));
 }
 
-// 把手肘、手腕「鎖住」的骨段變換：尺骨跟著上臂；橈骨與手只保留前臂旋轉（lockPronation 時連前臂旋轉也鎖住）
-function lockedLimbs(mats, side, lockPronation) {
-  const get = k => mats.get(`${k}.${side}`);
-  const forearm = lockPronation ? get('arm') : get('arm').clone().multiply(get('ulna').clone().invert()).multiply(get('radius'));
-  const locked = new Map([[`ulna.${side}`, get('arm')], [`radius.${side}`, forearm], [`hand.${side}`, forearm]]);
-  return { get: k => locked.get(k) ?? mats.get(k) };
+// 把有力臂的關節「鎖住」後的骨段變換：鎖住的關節遠端跟著近端走，其餘關節照常轉
+// lockedDist：被鎖住的關節（以遠端骨段命名，例如 'shank.r'＝右膝）
+function lockedMats(mats, lockedDist) {
+  const cache = new Map();
+  const get = key => {
+    if (cache.has(key)) return cache.get(key);
+    const [seg, side] = splitKey(key);
+    const parent = LIMB_PARENT[seg] && `${LIMB_PARENT[seg]}.${side}`;
+    let m = mats.get(key);
+    if (parent) {
+      const above = get(parent);
+      if (lockedDist.has(key)) m = above;
+      else if (above !== mats.get(parent)) m = above.clone().multiply(mats.get(parent).clone().invert()).multiply(m);
+    }
+    cache.set(key, m);
+    return m;
+  };
+  return { get };
 }
 
 // 長度變化率 Δ = L / L₀ − 1（負值＝縮短）；兩端幾乎重合（例如兩端都在骨盆內）時視為 0
-// 跨手肘、手腕的肌肉（part.wraps）：折線在手肘、手腕鎖住的姿勢量，再加上各關節的「−力臂 × 轉角」
+// 跨肢體關節的肌肉（part.wraps）：折線在這些關節鎖住的姿勢量，再加上各關節的「−力臂 × 轉角」
 // （肌腱繞著關節走，轉折點放在關節旁邊的話，彎到 90° 以上連線會穿過骨頭、長度反而變長）
+// 沒有力臂的前臂旋轉照直線量；旋後肌群有前臂旋轉的力臂，連前臂旋轉也鎖住
 export function lengthDelta(part, mats) {
   const rest = polylineLength(restPath(part));
   if (rest < 0.5) return 0;
   if (!part.wraps) return polylineLength(partPath(part, mats)) / rest - 1;
-  const lockPronation = part.wraps.some(w => w.prox.startsWith('ulna.'));
-  let len = polylineLength(partPath(part, lockedLimbs(mats, part.side, lockPronation)));
+  let len = polylineLength(partPath(part, lockedMats(mats, new Set(part.wraps.map(w => w.dist)))));
   for (const w of part.wraps) len -= w.m * jointAngleOf(mats.get(w.prox), mats.get(w.dist), w.axis);
   return len / rest - 1;
 }

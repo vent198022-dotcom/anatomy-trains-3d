@@ -48,3 +48,11 @@ test('力臂：關節附近的肌肉在遠端轉動方向那側為正，超過�
   const far = new Float32Array([0, -5, 1, 0, -20, 3]);
   assert.ok(Math.abs(momentArm(far, [0, 0, 0], [0, -1, 0], [1, 0, 0], 4) + 1) < 1e-9);
 });
+
+test('力臂：可只取關節近端；只看某條直線附近的頂點，附近沒有頂點時為 0', () => {
+  // 關節近端（−y 為遠端，所以 y > 0 是近端）在前方、遠端在後方的肌腱：只取近端時力臂為負（前方）
+  const tendon = new Float32Array([0, 1, 2, 0, -1, -2]);
+  assert.ok(Math.abs(momentArm(tendon, [0, 0, 0], [0, -1, 0], [1, 0, 0], 4, { slab: [-2, 0.5] }) + 2) < 1e-9);
+  assert.ok(Math.abs(momentArm(tendon, [0, 0, 0], [0, -1, 0], [1, 0, 0], 4)) < 1e-9, '對稱取樣時前後抵消');
+  assert.equal(momentArm(new Float32Array([5, 0, 1]), [0, 0, 0], [0, -1, 0], [1, 0, 0], 4, { near: 1.2 }), 0);
+});

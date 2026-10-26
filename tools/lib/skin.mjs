@@ -119,17 +119,26 @@ export function superficialVertex(positions, a, b, t, bonePoints) {
 }
 
 
-// 跨手肘、手腕的力臂（公分，帶正負號）：關節上下 2 公分內的肌肉頂點平均位置，投影到「遠端骨段正向轉動時移動的方向」
+// 跨肢體關節的力臂（公分，帶正負號）：關節附近（slab）的肌肉頂點平均位置，投影到「遠端骨段正向轉動時移動的方向」
+// slab：關節上下各取多少公分，或 [下限, 上限]（沿 dir 量，負值在關節近端；肌腱過了關節就轉向止點時，只取近端那一側）
 // 正值＝關節正向轉動（屈曲）時肌肉變短；肌肉沒有經過這一段（例如肌腱沒有建模）時改用最靠近關節面的 5% 頂點
 // pivot：轉軸上一點；dir：沿肢體往遠端的單位向量；axis：轉軸（與 rig.js 用的方向相同）
-export function momentArm(positions, pivot, dir, axis, maxArm) {
+// near：只看離「pivot 沿 dir 的直線」這麼近的頂點（手指用，分開各指的肌腱）；附近完全沒有頂點時力臂為 0
+export function momentArm(positions, pivot, dir, axis, maxArm, { slab = 2, near = Infinity } = {}) {
   const n = positions.length / 3;
   const along = v => (positions[v * 3] - pivot[0]) * dir[0] + (positions[v * 3 + 1] - pivot[1]) * dir[1] + (positions[v * 3 + 2] - pivot[2]) * dir[2];
-  let pick = [];
-  for (let v = 0; v < n; v++) if (Math.abs(along(v)) <= 2) pick.push(v);
+  const off = v => {
+    const t = along(v);
+    return Math.hypot(positions[v * 3] - pivot[0] - dir[0] * t, positions[v * 3 + 1] - pivot[1] - dir[1] * t, positions[v * 3 + 2] - pivot[2] - dir[2] * t);
+  };
+  const reach = [];
+  for (let v = 0; v < n; v++) if (off(v) <= near) reach.push(v);
+  if (!reach.length) return 0;
+  const [lo, hi] = Array.isArray(slab) ? slab : [-slab, slab];
+  let pick = reach.filter(v => along(v) >= lo && along(v) <= hi);
   if (!pick.length) {
-    const order = Array.from({ length: n }, (_, v) => v).sort((x, y) => Math.abs(along(x)) - Math.abs(along(y)));
-    pick = order.slice(0, Math.max(1, Math.ceil(n * 0.05)));
+    const order = reach.sort((x, y) => Math.abs(along(x)) - Math.abs(along(y)));
+    pick = order.slice(0, Math.max(1, Math.ceil(reach.length * 0.05)));
   }
   const c = [0, 0, 0];
   for (const v of pick) for (let i = 0; i < 3; i++) c[i] += positions[v * 3 + i] / pick.length;
