@@ -23,7 +23,7 @@ initLineBar(document.getElementById('lineBar'), ctrl);
 initViewBar(document.getElementById('viewBar'), viewer);
 initPanPad(document.getElementById('panPad'), viewer);
 
-// 點一下選取肌肉；拖曳旋轉不算點選；按下時讓 3D 視窗取得焦點，方向鍵才能平移
+// 點一下選取肌肉（變紫色），再點同一條取消選取、恢復原本的顏色；拖曳旋轉不算點選；按下時讓 3D 視窗取得焦點，方向鍵才能平移
 const canvas = viewer.renderer.domElement;
 let down = null;
 canvas.addEventListener('pointerdown', e => {
@@ -31,7 +31,10 @@ canvas.addEventListener('pointerdown', e => {
   canvas.focus({ preventScroll: true });
 });
 canvas.addEventListener('pointerup', e => {
-  if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 5) ctrl.select(ctrl.pickAt(e.clientX, e.clientY));
+  if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 5) {
+    const key = ctrl.pickAt(e.clientX, e.clientY);
+    ctrl.select(key && key === ctrl.state.selectedKey ? null : key);
+  }
   down = null;
 });
 

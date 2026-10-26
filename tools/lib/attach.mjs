@@ -94,6 +94,19 @@ export function refineEnds(positions, regionA, regionB, endFrac = 0.3) {
 }
 
 // 肌腹中段（連線上 lo–hi）的平均位置，當作轉折點
+// 肌肉中段（連線 lo…hi）最前方（+z）frac 比例頂點的平均位置：腹斜肌往白線的纖維
+export function frontCentroid(positions, a, b, lo = 0.3, hi = 0.7, frac = 0.1) {
+  const n = positions.length / 3;
+  const kept = [];
+  for (let v = 0; v < n; v++) {
+    const t = projT(positions, v, a, b);
+    if (t >= lo && t <= hi) kept.push(v);
+  }
+  if (!kept.length) return midBellyCentroid(positions, a, b);
+  kept.sort((x, y) => positions[y * 3 + 2] - positions[x * 3 + 2]);
+  return centroidOf(positions, kept.slice(0, Math.max(1, Math.ceil(kept.length * frac))));
+}
+
 export function midBellyCentroid(positions, a, b, lo = 0.4, hi = 0.6) {
   const n = positions.length / 3;
   const kept = [];

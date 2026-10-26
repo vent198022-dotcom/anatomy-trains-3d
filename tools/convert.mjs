@@ -3,8 +3,8 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { loadFbx, indexMeshes, indexGroups, meshesUnder } from './lib/fbx.mjs';
 import { isAnnotation, sideOf, withSide } from './lib/names.mjs';
 import { worldGeometry, simplify } from './lib/geometry.mjs';
-import { PointGrid, attachmentRegion, refineEnds, midBellyCentroid, meanPoint } from './lib/attach.mjs';
-import { samplePoints, skinWeights, nearestSegment, chainVias, superficialVertex } from './lib/skin.mjs';
+import { PointGrid, attachmentRegion, refineEnds, midBellyCentroid, frontCentroid, meanPoint } from './lib/attach.mjs';
+import { samplePoints, skinWeights, nearestSegment, chainVias, superficialVertex, axisT } from './lib/skin.mjs';
 import { limbWraps } from './lib/limbJoints.mjs';
 import { estimateJoints } from './lib/joints.mjs';
 import { packMeshes } from './lib/pack.mjs';
@@ -95,8 +95,9 @@ for (const p of PARTS) {
     });
     const ends = refineEnds(geo.positions, regions[0], regions[regions.length - 1]);
 
-    // 這個部件跨過的骨段（依附著骨頭）；端點跟著離它最近的骨頭所屬骨段
-    const allNames = [...new Set(groups.flat())];
+    // 這個部件跨過的骨段（依附著骨頭，加上只用來變形的 skinWith）；端點跟著離它最近的骨頭所屬骨段
+    const skinWith = p.skinWith.map(b => (p.unsided || !b.includes('{s}') ? b : withSide(b, side)));
+    const allNames = [...new Set([...groups.flat(), ...skinWith])];
     const segs = [...new Set(allNames.map(n => bone(n).segment))];
     const segPoints = segs.map(s => concat(allNames.filter(n => bone(n).segment === s).map(samplesOf)));
     const endSeg = (names, point) => {
@@ -107,16 +108,27 @@ for (const p of PARTS) {
     const segB = endSeg(groups[groups.length - 1], ends.b);
 
     let skin = null, skinSegs = null, wraps = null;
-    let vias = p.via ? [{ seg: segB, p: round(midBellyCentroid(geo.positions, ends.a, ends.b)) }] : [];
+    let vias = p.via === true ? [{ seg: segB, p: round(midBellyCentroid(geo.positions, ends.a, ends.b)) }] : [];
     const crossesLimbJoint = segs.length >= 2 && segs.some(largeRotation);
     if (segs.length > 2 || crossesLimbJoint) {
       // 跨三個以上骨段、或跨過肢體關節（轉動角度大，沿連線混合會塌陷）：每個頂點跟著最近的兩個骨段
       skin = skinWeights(geo.positions, segPoints);
       skinSegs = segs;
-      // 端點群組以外的骨段各加一個轉折點；前臂骨不加（前臂旋轉時，分別跟著尺骨、橈骨的兩個轉折點會讓連線打折）
+      // 端點群組以外的附著骨段各加一個轉折點；前臂骨不加（前臂旋轉時，分別跟著尺骨、橈骨的兩個轉折點會讓連線打折）；
+      // skinWith 的骨段只管變形，不加轉折點（不改變長度的量法）
       const endSegs = new Set([...groups[0], ...groups[groups.length - 1]].map(n => bone(n).segment));
-      const middle = segs.map((s, i) => i).filter(i => !endSegs.has(segs[i]) && !/^(ulna|radius)\./.test(segs[i]));
+      const attachSegs = new Set(groups.flat().map(n => bone(n).segment));
+      const middle = segs.map((s, i) => i).filter(i => attachSegs.has(segs[i]) && !endSegs.has(segs[i]) && !/^(ulna|radius)\./.test(segs[i]));
       vias = chainVias(geo.positions, skin, middle, ends.a, ends.b).map(v => ({ seg: segs[v.s], p: round(v.p) }));
+    }
+    // 腹斜肌：往前方白線的纖維管轉身。在肌肉最前方加一個跟著遠端骨段的轉折點（依連線位置排序）：
+    // via 'front' 直接放進主路徑；frontBundle 則另外量一束，長度與主路徑取平均（見 src/muscles/length.js）
+    let altVias = null;
+    if (p.via === 'front' || p.frontBundle) {
+      const along = q => axisT(Float32Array.from(q), 0, ends.a, ends.b);
+      const withFront = [...vias, { seg: segB, p: round(frontCentroid(geo.positions, ends.a, ends.b)) }].sort((x, y) => along(x.p) - along(y.p));
+      if (p.frontBundle) altVias = [withFront];
+      else vias = withFront;
     }
     if (crossesLimbJoint) {
       // 跨肢體關節（手肘、手腕、手指、膝、踝、距下）：長度變化用「力臂 × 轉角」（見 tools/lib/limbJoints.mjs、src/muscles/length.js）
@@ -148,6 +160,7 @@ for (const p of PARTS) {
       a: round(ends.a),
       b: round(ends.b),
       vias,
+      altVias,
       tps: p.tp.map(t => superficialVertex(geo.positions, ends.a, ends.b, t, allBonePoints)),
       centroid: round(meanPoint(geo.positions)),
       dmin: regions.map(r => round(r.dmin)),

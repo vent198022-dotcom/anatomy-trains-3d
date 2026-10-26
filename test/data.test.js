@@ -24,7 +24,8 @@ test('附著區都貼近指定的骨頭，端點沒有無效值', () => {
 test('骨段、權重、痠痛點的資料一致', () => {
   const segs = new Set(SEGMENT_KEYS);
   for (const p of meta.parts) {
-    for (const s of [p.segA, p.segB, ...p.vias.map(v => v.seg), ...(p.skinSegs ?? [])]) assert.ok(segs.has(s), `${p.key}：${s}`);
+    const altSegs = (p.altVias ?? []).flat().map(v => v.seg);
+    for (const s of [p.segA, p.segB, ...p.vias.map(v => v.seg), ...altSegs, ...(p.skinSegs ?? [])]) assert.ok(segs.has(s), `${p.key}：${s}`);
     assert.equal(p.skinSegs ? p.sOffset !== undefined : p.sOffset === undefined, true, `${p.key} 權重資料`);
     for (const v of p.tps) assert.ok(v >= 0 && v < p.vCount, `${p.key} 痠痛點頂點 ${v}`);
     for (const w of p.wraps ?? []) {

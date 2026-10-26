@@ -9,6 +9,7 @@
   --long: #79a8ff;
   --same: #b3ada8;
   --pain: #ffd23f;
+  --selected: #c79bff;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
@@ -87,6 +88,7 @@ button.active { background: var(--accent); border-color: var(--accent); color: #
 #legend .long { color: var(--long); }
 #legend .same { color: var(--same); }
 #legend .pain { color: var(--pain); }
+#legend .selected { color: var(--selected); }
 #loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }
 
 .side { margin-left: 8px; font-size: 13px; font-weight: 400; color: var(--muted); }

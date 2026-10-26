@@ -18,9 +18,9 @@ test('細帶的網格座標：沿長度一組、圓周四條縱線、第三組�
   assert.deepEqual(Array.from(tubeNetCoords(new Float32Array([0.5, 0.25]), 6, 1.5)), [2, 1, 0.5]);
 });
 
-// 前功能線：胸大肌腹部 → 腹直肌 → 對側內收長肌；每個部件是一個小三角形
-function fakeParts() {
-  const ids = [...linePartIds('ffl')];
+// 線上部件做成小三角形；預設是前功能線：胸大肌腹部 → 腹直肌 → 對側內收長肌
+function fakeParts(lineIds = ['ffl']) {
+  const ids = [...new Set(lineIds.flatMap(l => [...linePartIds(l)]))];
   return ids.flatMap((id, i) =>
     ['l', 'r'].map(side => {
       const x = side === 'r' ? -5 : 5;
@@ -60,5 +60,16 @@ test('網格顏色：中立姿勢藍色；改變姿勢後依長度狀態，不�
   for (const s of net.shells) assert.ok(close(colorOf(s), NET_BLUE));
   net.update(mats, p => p.target, true);
   for (const s of net.shells) assert.ok(close(colorOf(s), s.part.info.measure ? lengthColor(s.part.delta) : PALETTE.same), s.part.info.key);
+  net.dispose();
+});
+
+test('複選列車線：共用的部件只掛一層外殼，細帶只連同一條線的站', () => {
+  // 後功能線（闊背肌 → 胸腰筋膜 → 對側臀大肌 → 對側股外側肌）與同側功能線（闊背肌 → 腹外斜肌 → 縫匠肌）共用闊背肌
+  const parts = fakeParts(['bfl', 'ifl']);
+  const net = createNet(['bfl', 'ifl'], parts);
+  assert.equal(net.shells.length, parts.length, '每個部件一層');
+  for (const p of parts) assert.equal(p.mesh.children.length, 1, p.info.key);
+  net.update(mats, p => p.target, false);
+  assert.equal(net.group.children.length, 2 * 3 + 2 * 2, '後功能線每側 3 條、同側功能線每側 2 條');
   net.dispose();
 });

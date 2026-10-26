@@ -20,6 +20,11 @@ test('12 個預設姿勢', () => {
   assert.equal(PRESETS.unevenShoulders.params['scapElevation.l'], -0.3);
 });
 
+test('彎腰與大腿抬起的參數', () => {
+  for (const k of ['trunkFlexion', 'trunkSideBend', 'trunkRotation', 'hipFlexion.l', 'hipFlexion.r']) assert.equal(NEUTRAL[k], 0, k);
+  assert.equal(bilateral({ trunkRotation: 0.5, hipFlexion: 0.75 })['hipFlexion.l'], 0.75);
+});
+
 test('bilateral：分左右的參數兩側同值，其餘為 0', () => {
   const p = bilateral({ scapProtraction: 0.8, headForward: 0.2 });
   assert.equal(p['scapProtraction.l'], 0.8);

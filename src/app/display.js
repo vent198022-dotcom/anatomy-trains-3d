@@ -21,17 +21,16 @@ export function createDisplayState() {
   };
 }
 
-// part：{ key, id, layer }；回傳 { visible, opacity, glow, pickable }
+// part：{ key, id, layer }；回傳 { visible, opacity, glow, pickable, selected }
 export function partDisplay(part, st) {
-  if (!st.layers[part.layer] || st.hidden.has(part.key)) return { visible: false, opacity: 0, glow: 0, pickable: false };
+  if (!st.layers[part.layer] || st.hidden.has(part.key)) return { visible: false, opacity: 0, glow: 0, pickable: false, selected: false };
   let opacity = st.ghost.has(part.key) ? GHOST_OPACITY : 1;
   let glow = 0;
   if (st.lineParts) {
     if (st.lineParts.has(part.id)) glow = 0.25;
     else opacity = Math.min(opacity, LINE_FADE_OPACITY);
   }
-  if (st.selectedKey === part.key) glow = 0.45;
-  return { visible: true, opacity, glow, pickable: opacity >= PICK_MIN_OPACITY };
+  return { visible: true, opacity, glow, pickable: opacity >= PICK_MIN_OPACITY, selected: st.selectedKey === part.key };
 }
 
 // 爆炸圖與拉出的位移：從身體中軸（axis = [x, z]）沿水平方向往外

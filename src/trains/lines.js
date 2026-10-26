@@ -116,6 +116,12 @@ export const LINES = [
   },
 ].map(line => ({ ...line, stations: line.stations.map(station) }));
 
+// 複選的列車線：各線部件的聯集；沒選線時為 null
+export function linesPartIds(lineIds) {
+  if (!lineIds.length) return null;
+  return new Set(lineIds.flatMap(id => [...(linePartIds(id) ?? [])]));
+}
+
 export function linePartIds(lineId) {
   const line = LINES.find(l => l.id === lineId);
   return line ? new Set(line.stations.flatMap(s => s.ids)) : null;

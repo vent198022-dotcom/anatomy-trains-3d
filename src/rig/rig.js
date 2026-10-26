@@ -21,12 +21,24 @@ export const LIMITS = {
   supination: 10, // 前臂再旋後
   wristFlexion: 70, // 手腕屈曲
   wristExtension: 60, // 手腕伸展
+  hipFlexion: 120, // 大腿抬起（髖屈曲）
+  hipExtension: 20, // 大腿往後（髖伸展）
   kneeFlexion: 140, // 膝彎曲
   kneeExtension: 15, // 膝過伸（示範用，比一般的 5–10° 大）
   dorsiflexion: 20, // 踝背屈
   plantarflexion: 45, // 踝蹠屈
   inversion: 30, // 足內翻
   eversion: 25, // 足外翻（示範用，比一般的 15–20° 大）
+};
+
+// 彎腰（雙腳不動）：參數 ±1 時各骨段分到的角度（度）
+// 前彎 90° 依腰椎骨盆節律分給髖關節（骨盆繞髖前轉）50°、腰椎 40°；後仰 30° 分給腰椎 20°、髖 10°
+// 側彎 30° 分給腰椎 18°、下胸 6°、中胸 6°；轉向 45° 大多在胸椎（腰椎的旋轉很小）
+export const TRUNK = {
+  flexion: { hip: 50, lumbar: 40 },
+  extension: { hip: 10, lumbar: 20 },
+  sideBend: { lumbar: 18, thoraxLow: 6, thoraxMid: 6, thoraxUp: 0 },
+  rotation: { lumbar: 10, thoraxLow: 12, thoraxMid: 13, thoraxUp: 10 },
 };
 
 // 手指、拇指的三個關節在參數 ±1 時的角度（度）：四指為掌指、近端指間、遠端指間，拇指為腕掌、掌指、指間
@@ -104,39 +116,54 @@ export function computePose(joints, params = {}) {
   const piv = joints.pivots;
 
   // 骨盆：前後傾繞兩側髖關節連線；側傾繞長腳那側的髖關節（正值＝左側下降、左腳短）
+  // 彎腰時骨盆也繞髖關節往前轉（髖屈曲），但腰椎不代償
   const tilt = LIMITS.pelvicTilt * DEG * p.pelvicTilt;
   const obliquity = LIMITS.pelvicObliquity * DEG * p.pelvicObliquity;
+  const bend = p.trunkFlexion >= 0 ? TRUNK.flexion : TRUNK.extension;
+  const hipFlexion = bend.hip * DEG * p.trunkFlexion;
+  const lumbarFlexion = bend.lumbar * DEG * p.trunkFlexion;
+  const sideBend = DEG * p.trunkSideBend; // 正值＝往左彎
+  const rotation = DEG * p.trunkRotation; // 正值＝往左轉
   const hipMid = vec(joints.hip.l).add(vec(joints.hip.r)).multiplyScalar(0.5);
   const pivotHip = p.pelvicObliquity >= 0 ? joints.hip.r : joints.hip.l;
-  const pelvis = rotateAbout(hipMid, X, tilt).multiply(rotateAbout(pivotHip, Z, -obliquity));
+  const pelvis = rotateAbout(hipMid, X, tilt + hipFlexion).multiply(rotateAbout(pivotHip, Z, -obliquity));
   mats.set('pelvis', pelvis);
-  // 下肢：大腿跟著髖關節平移（長短腳）；小腿繞膝、距骨繞踝（背屈／蹠屈）、足繞距下關節（內翻／外翻）
+  // 下肢：大腿跟著髖關節平移（長短腳），再繞髖關節的內外側軸抬起（屈曲時膝往前上，繞 +x 轉負角）；
+  // 小腿繞膝、距骨繞踝（背屈／蹠屈）、足繞距下關節（內翻／外翻）
   // 轉軸的正方向＝膝彎曲、踝背屈、足內翻（見 tools/lib/joints.mjs）
   for (const s of ['l', 'r']) {
     const shift = vec(joints.hip[s]).applyMatrix4(pelvis).sub(vec(joints.hip[s]));
     const leg = new THREE.Matrix4().makeTranslation(shift.x, shift.y, shift.z);
+    const femur = leg.clone().multiply(rotateAbout(joints.hip[s], X, -jointAngle(p[`hipFlexion.${s}`], LIMITS.hipFlexion, LIMITS.hipExtension)));
     const { knee, ankle, subtalar } = joints;
-    const shank = leg.clone().multiply(rotateAbout(knee[s].pivot, vec(knee[s].axis), jointAngle(p[`kneeFlexion.${s}`], LIMITS.kneeFlexion, LIMITS.kneeExtension)));
+    const shank = femur.clone().multiply(rotateAbout(knee[s].pivot, vec(knee[s].axis), jointAngle(p[`kneeFlexion.${s}`], LIMITS.kneeFlexion, LIMITS.kneeExtension)));
     const talus = shank.clone().multiply(rotateAbout(ankle[s].pivot, vec(ankle[s].axis), jointAngle(p[`ankleFlexion.${s}`], LIMITS.dorsiflexion, LIMITS.plantarflexion)));
     const foot = talus.clone().multiply(rotateAbout(subtalar[s].pivot, vec(subtalar[s].axis), jointAngle(p[`footInversion.${s}`], LIMITS.inversion, LIMITS.eversion)));
-    mats.set(`femur.${s}`, leg);
+    mats.set(`femur.${s}`, femur);
     mats.set(`shank.${s}`, shank);
     mats.set(`talus.${s}`, talus);
     mats.set(`foot.${s}`, foot);
   }
 
-  // 腰椎：五節平均反向轉回去
+  // 側彎、轉向：繞該節椎體的前後軸、上下軸轉 sideDeg、turnDeg（參數 ±1 時的度數）
+  // 往左彎＝上方往 +x，所以繞 +z 轉負角；往左轉＝前方轉向 +x，繞 +y 轉正角
+  const bendAndTurn = (seg, sideDeg, turnDeg) => rotateAbout(piv[seg], Z, -sideBend * sideDeg).multiply(rotateAbout(piv[seg], Y, rotation * turnDeg));
+
+  // 腰椎：五節平均反向轉回骨盆前後傾（胸廓維持直立）；彎腰的腰椎屈曲、側彎、轉向五節平均分
   let parent = pelvis;
   for (const seg of LUMBAR) {
-    const m = parent.clone().multiply(rotateAbout(piv[seg], X, -tilt / 5)).multiply(rotateAbout(piv[seg], Z, obliquity / 5));
+    const m = parent.clone()
+      .multiply(rotateAbout(piv[seg], X, (lumbarFlexion - tilt) / 5))
+      .multiply(rotateAbout(piv[seg], Z, obliquity / 5))
+      .multiply(bendAndTurn(seg, TRUNK.sideBend.lumbar / 5, TRUNK.rotation.lumbar / 5));
     mats.set(seg, m);
     parent = m;
   }
 
-  // 胸椎三段屈曲
+  // 胸椎三段屈曲（駝背），加上彎腰的側彎、轉向
   const kyphosis = LIMITS.thoracicFlexion * DEG * p.thoracicFlexion;
   for (const seg of ['thoraxLow', 'thoraxMid', 'thoraxUp']) {
-    const m = parent.clone().multiply(rotateAbout(piv[seg], X, kyphosis * THORACIC_SHARE[seg]));
+    const m = parent.clone().multiply(rotateAbout(piv[seg], X, kyphosis * THORACIC_SHARE[seg])).multiply(bendAndTurn(seg, TRUNK.sideBend[seg], TRUNK.rotation[seg]));
     mats.set(seg, m);
     parent = m;
   }

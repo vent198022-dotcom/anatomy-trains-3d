@@ -74,6 +74,31 @@ const JOINT_CHECKS = {
     short: ['tibialisAnterior', 'extensorHallucisLongus', 'fibularisTertius'],
     long: ['gastrocnemiusMed', 'gastrocnemiusLat', 'soleus'],
   },
+  彎腰前彎: {
+    params: bilateral({ trunkFlexion: 1 }),
+    short: ['rectusAbdominis', 'iliacus', 'pectineus'],
+    long: ['gluteusMaximus', 'semitendinosus', 'bicepsFemorisLong', 'iliocostalisLumborum', 'quadratusLumborum'],
+  },
+  彎腰往左側彎: {
+    params: bilateral({ trunkSideBend: 1 }),
+    short: ['quadratusLumborum.l', 'externalOblique.l', 'transversusAbdominis.l'],
+    long: ['quadratusLumborum.r', 'externalOblique.r', 'transversusAbdominis.r'],
+  },
+  彎腰往左轉: {
+    params: bilateral({ trunkRotation: 1 }),
+    short: ['externalOblique.r', 'internalOblique.l'],
+    long: ['externalOblique.l', 'internalOblique.r'],
+  },
+  大腿抬起: {
+    params: bilateral({ hipFlexion: 0.75 }),
+    short: ['iliacus', 'pectineus', 'tensorFasciaeLatae', 'sartorius', 'rectusFemoris'],
+    long: ['gluteusMaximus', 'semitendinosus', 'bicepsFemorisLong', 'adductorMagnus'],
+  },
+  坐姿: {
+    params: bilateral({ hipFlexion: 0.75, kneeFlexion: 0.643 }), // 髖 90°、膝 90°
+    short: ['iliacus', 'gastrocnemiusMed'],
+    long: ['gluteusMaximus', 'semitendinosus', 'vastusLateralis'],
+  },
   足內翻: {
     params: bilateral({ footInversion: 1 }),
     short: ['tibialisPosterior', 'flexorDigitorumLongus'],

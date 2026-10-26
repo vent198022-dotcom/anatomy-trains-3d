@@ -4,13 +4,14 @@ import { computePose } from '../rig/rig.js';
 import { NEUTRAL, isNeutral } from '../rig/presets.js';
 import { deformInto, deformChain } from '../muscles/deform.js';
 import { lengthDelta } from '../muscles/length.js';
-import { lengthColor, PALETTE } from '../muscles/colors.js';
+import { partColor } from '../muscles/colors.js';
 import { createDisplayState, partDisplay, partOffset, resetDisplay, restoreParts, painMarkerState } from './display.js';
-import { linePartIds } from '../trains/lines.js';
+import { linesPartIds } from '../trains/lines.js';
 import { createNet } from '../trains/net.js';
 
 const MARKER_COLORS = { focus: [1, 0.85, 0.2], short: [1, 0.4, 0.2], long: [0.4, 0.65, 1] };
 const MARKER_LIFT = 0.5; // 標記沿法向量浮出肌肉表面的距離（公分）
+const SELECTED_EMISSIVE = [0.12, 0.05, 0.2]; // 選取的肌肉稍微自發光，在暗處也看得到紫色
 
 export function createController(viewer, model) {
   const state = createDisplayState();
@@ -19,7 +20,7 @@ export function createController(viewer, model) {
   const listeners = [];
   let params = { ...NEUTRAL };
   let mats = null;
-  let activeLine = null;
+  let activeLines = []; // 目前顯示的列車線（可複選，依點選順序）
   let net = null; // 目前列車線的筋膜網
 
   const poseActive = () => !isNeutral(params);
@@ -60,7 +61,7 @@ export function createController(viewer, model) {
 
   function applyColors() {
     for (const p of model.parts) {
-      const rgb = !poseActive() ? PALETTE.natural : p.info.measure ? lengthColor(p.delta) : PALETTE.same;
+      const rgb = partColor({ selected: state.selectedKey === p.info.key, poseActive: poseActive(), measure: p.info.measure, delta: p.delta });
       p.mesh.material.color.setRGB(rgb[0], rgb[1], rgb[2], THREE.SRGBColorSpace);
     }
   }
@@ -78,10 +79,12 @@ export function createController(viewer, model) {
         m.needsUpdate = true; // 不透明材質的著色器會把 alpha 固定為 1，切換時要重新編譯
       }
       m.depthWrite = !transparent;
-      m.emissive.setRGB(d.glow, d.glow * 0.85, d.glow * 0.5);
+      if (d.selected) m.emissive.setRGB(...SELECTED_EMISSIVE);
+      else m.emissive.setRGB(d.glow, d.glow * 0.85, d.glow * 0.5);
       p.pickable = d.pickable;
       p.target = partOffset(p.info, state, axis);
     }
+    applyColors(); // 選取改變時顏色也要換
     applyMarkers();
     updateNet();
   }
@@ -118,15 +121,23 @@ export function createController(viewer, model) {
     net?.update(mats, p => p.target, poseActive());
   }
 
-  function showNet(lineId) {
+  function showNet(lineIds) {
     if (net) {
       viewer.scene.remove(net.group);
       net.dispose();
       net = null;
     }
-    if (!lineId) return;
-    net = createNet(lineId, model.parts);
+    if (!lineIds.length) return;
+    net = createNet(lineIds, model.parts);
     viewer.scene.add(net.group);
+  }
+
+  function setLines(lineIds) {
+    activeLines = lineIds;
+    state.lineParts = linesPartIds(lineIds);
+    showNet(lineIds);
+    applyDisplay();
+    emit();
   }
 
   // 拆解位移每一幀平滑靠近目標（約 0.4 秒到位）；痠痛點跟著移動
@@ -151,8 +162,8 @@ export function createController(viewer, model) {
     get poseActive() {
       return poseActive();
     },
-    get activeLine() {
-      return activeLine;
+    get activeLines() {
+      return [...activeLines];
     },
     parts: model.parts,
     partByKey: key => byKey.get(key),
@@ -199,12 +210,12 @@ export function createController(viewer, model) {
       applyDisplay();
       emit();
     },
-    setLine(lineId) {
-      activeLine = lineId;
-      state.lineParts = linePartIds(lineId);
-      showNet(lineId);
-      applyDisplay();
-      emit();
+    // 點一條列車線：沒選就加入、已選就移除（可複選）
+    toggleLine(lineId) {
+      setLines(activeLines.includes(lineId) ? activeLines.filter(id => id !== lineId) : [...activeLines, lineId]);
+    },
+    clearLines() {
+      setLines([]);
     },
     reset() {
       resetDisplay(state);

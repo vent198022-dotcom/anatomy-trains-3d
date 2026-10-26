@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { polylineLength, lengthDelta, jointAngleOf } from '../src/muscles/length.js';
 import { prepareDeform, deformInto, deformChain } from '../src/muscles/deform.js';
-import { lengthState, lengthColor, deltaText, PALETTE } from '../src/muscles/colors.js';
+import { lengthState, lengthColor, deltaText, partColor, PALETTE } from '../src/muscles/colors.js';
 
 const I = new THREE.Matrix4();
 const move = (x, y, z) => new THREE.Matrix4().makeTranslation(x, y, z);
@@ -116,6 +116,13 @@ test('狀態與畫面上四捨五入的 % 一致（+2.6% 顯示 +3%，就算鎖�
   assert.equal(lengthState(-0.025), 'short');
   const c = lengthColor(0.026);
   assert.ok(c[2] > PALETTE.same[2]);
+});
+
+test('肌肉顏色：選取中紫色；中立姿勢肌肉色；改變姿勢後依長度狀態，不計算長度的灰色', () => {
+  assert.deepEqual(partColor({ selected: true, poseActive: true, measure: true, delta: -0.2 }), PALETTE.selected);
+  assert.deepEqual(partColor({ selected: false, poseActive: false, measure: true, delta: 0 }), PALETTE.natural);
+  assert.deepEqual(partColor({ selected: false, poseActive: true, measure: true, delta: -0.2 }), lengthColor(-0.2));
+  assert.deepEqual(partColor({ selected: false, poseActive: true, measure: false, delta: -0.2 }), PALETTE.same);
 });
 
 test('顏色隨變化加深，20% 以上飽和', () => {

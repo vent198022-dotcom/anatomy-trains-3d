@@ -65,7 +65,14 @@ function lockedMats(mats, lockedDist) {
 // 跨肢體關節的肌肉（part.wraps）：折線在這些關節鎖住的姿勢量，再加上各關節的「−力臂 × 轉角」
 // （肌腱繞著關節走，轉折點放在關節旁邊的話，彎到 90° 以上連線會穿過骨頭、長度反而變長）
 // 沒有力臂的前臂旋轉照直線量；旋後肌群有前臂旋轉的力臂，連前臂旋轉也鎖住
+// 寬的扁平肌（part.altVias，例如腹斜肌）：側面那束（vias）與前面那束（altVias）各量一次取平均
 export function lengthDelta(part, mats) {
+  if (!part.altVias) return bundleDelta(part, mats);
+  const bundles = [part.vias, ...part.altVias].map(vias => bundleDelta({ ...part, vias }, mats));
+  return bundles.reduce((sum, d) => sum + d, 0) / bundles.length;
+}
+
+function bundleDelta(part, mats) {
   const rest = polylineLength(restPath(part));
   if (rest < 0.5) return 0;
   if (!part.wraps) return polylineLength(partPath(part, mats)) / rest - 1;

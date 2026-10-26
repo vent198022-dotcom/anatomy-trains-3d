@@ -38,6 +38,7 @@ export function buildModel(data) {
     material.color.setRGB(...PALETTE.natural, THREE.SRGBColorSpace);
     const mesh = new THREE.Mesh(geo, material);
     mesh.userData.partKey = info.key;
+    mesh.frustumCulled = false; // 外接球在姿勢動畫中延後更新，用舊的外接球剔除會讓肌肉暫時消失
     group.add(mesh);
     // 痠痛點：記住對應的頂點，姿勢改變後跟著頂點移動；肌肉本身拆解位移時一起移
     const tps = info.tps.map(vertex => {

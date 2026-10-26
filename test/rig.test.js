@@ -191,3 +191,33 @@ test('只彎右膝：左腳不動', () => {
   assert.ok(!isIdentity(mats.get('shank.r')));
   for (const k of ['shank.l', 'talus.l', 'foot.l']) assert.ok(isIdentity(mats.get(k)), k);
 });
+
+test('彎腰前彎：骨盆繞髖往前轉、上胸往前下，雙腳不動；後仰相反', () => {
+  const mats = computePose(J, { trunkFlexion: 1 });
+  const chest = at(mats, 'thoraxUp', [0, 136, 0]);
+  assert.ok(chest.z > 30 && chest.y < 136 - 20, `上胸 ${chest.toArray()}`);
+  assert.ok(at(mats, 'pelvis', [0, 100, 5]).z > 5 + 5, '骨盆上緣往前');
+  assert.ok(isIdentity(mats.get('femur.l')) && isIdentity(mats.get('foot.r')), '雙腳不動');
+  assert.ok(at(computePose(J, { trunkFlexion: -1 }), 'thoraxUp', [0, 136, 0]).z < -3, '後仰時上胸往後');
+});
+
+test('彎腰側彎往左：上胸往左（+x），骨盆不動', () => {
+  const mats = computePose(J, { trunkSideBend: 1 });
+  assert.ok(at(mats, 'thoraxUp', [0, 136, 0]).x > 5);
+  assert.ok(isIdentity(mats.get('pelvis')));
+  assert.ok(at(computePose(J, { trunkSideBend: -1 }), 'thoraxUp', [0, 136, 0]).x < -5);
+});
+
+test('彎腰轉向往左：胸前轉向左（+x），骨盆與腿不動', () => {
+  const mats = computePose(J, { trunkRotation: 1 });
+  assert.ok(at(mats, 'thoraxUp', [0, 130, 10]).x > 4);
+  assert.ok(isIdentity(mats.get('pelvis')) && isIdentity(mats.get('femur.r')));
+});
+
+test('大腿抬起：膝往前、往上，骨盆不動，小腿跟著大腿；只抬右腿時左腿不動', () => {
+  const mats = computePose(J, { 'hipFlexion.r': 0.75 }); // 90°
+  const knee = at(mats, 'femur.r', J.knee.r.pivot);
+  assert.ok(knee.z > J.knee.r.pivot[2] + 30 && knee.y > J.knee.r.pivot[1] + 30, `右膝 ${knee.toArray()}`);
+  assert.ok(isIdentity(mats.get('pelvis')) && isIdentity(mats.get('femur.l')));
+  assert.ok(at(mats, 'shank.r', J.knee.r.pivot).distanceTo(knee) < 1e-6);
+});

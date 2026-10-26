@@ -61,10 +61,15 @@ function part(id, zName, layer, region, attach, opts = {}) {
     layer,
     region,
     attach: attach.map(bones => ({ bones })),
-    via: Boolean(opts.via), // 繞過肱骨頭：加一個肌腹中段的轉折點
+    // true：繞過肱骨頭，加一個肌腹中段的轉折點；'front'：轉折點放在肌肉最前方（往白線的纖維，轉身時才算得對）
+    via: opts.via ?? false,
+    // 另外量一束經過肌肉最前方的路徑，長度與主路徑取平均（腹外斜肌：側面纖維管側彎、前面纖維管轉身）
+    frontBundle: Boolean(opts.frontBundle),
     measure: opts.measure ?? true, // 筋膜、肌腱不計算長度
     maxGap: opts.maxGap ?? 2, // 附著區與骨頭的最大容許距離（公分）
     tp: opts.tp ?? [0.5],
+    // 只用來決定變形的骨頭（不算附著）：腹壁各層用同一組，同一個位置的頂點跟著同樣的骨段走，彎腰時才不會互相穿出
+    skinWith: opts.skinWith ?? [],
     // 繞著橈骨捲的旋後肌群：前臂旋轉改用文獻力臂（公分；負值＝旋前時拉長），直線量不出捲繞
     pronationArm: opts.pronationArm ?? null,
     // 其他關節的文獻力臂（公分，正值＝屈曲時變短），以關節的遠端骨段命名，例如 { shank: 1.5 }＝膝
@@ -72,6 +77,9 @@ function part(id, zName, layer, region, attach, opts = {}) {
   };
 }
 const fascia = { measure: false };
+// 腹壁（腹直肌、白線、腹內外斜肌、腹橫肌）共用的變形骨頭：骨盆、五節腰椎、下肋與肋軟骨、胸骨
+const ABDOMINAL_WALL = both(['Hip bone.{s}', ...range(1, 5).map(L), ...ribs(5, 12), ...range(5, 10).map(cartilage), 'Xiphoid process', 'Body of sternum']);
+const wall = { skinWith: ABDOMINAL_WALL };
 
 export const PARTS = [
   // ── 第一階段：肩帶 ──
@@ -225,13 +233,14 @@ export const PARTS = [
   part('diaphragm', 'Diaphragm', 'deep', 'trunk', [Ls(1, 3), both(['Xiphoid process', ...range(7, 10).map(cartilage), rib(11), rib(12)])], { unsided: true, measure: false, tp: [] }), // 穹頂形，不以起止點距離衡量
 
   // ── 2A：腹部 ──
-  part('rectusAbdominis', 'Rectus abdominis muscle', 'superficial', 'trunk', [HIP, ['Xiphoid process', ...range(5, 7).map(cartilage)]], { tp: [0.25, 0.75] }),
-  part('externalOblique', 'External abdominal oblique muscle', 'superficial', 'trunk', [ribs(5, 12), HIP], { tp: [0.4] }),
-  part('internalOblique', 'Internal abdominal oblique muscle', 'middle', 'trunk', [HIP, ribs(10, 12)], { tp: [0.4] }),
-  part('transversusAbdominis', 'Transversus abdominis muscle', 'deep', 'trunk', [HIP, [...range(7, 10).map(cartilage), ...ribs(11, 12)]], { tp: [] }),
+  part('rectusAbdominis', 'Rectus abdominis muscle', 'superficial', 'trunk', [HIP, ['Xiphoid process', ...range(5, 7).map(cartilage)]], { ...wall, tp: [0.25, 0.75] }),
+  part('externalOblique', 'External abdominal oblique muscle', 'superficial', 'trunk', [ribs(5, 12), HIP], { ...wall, tp: [0.4], frontBundle: true }),
+  // 腹內斜肌：模型的止點在第 10–12 肋後外側，連線往後上，與實際往前內上的纖維方向相反，所以只量經過前方的路徑
+  part('internalOblique', 'Internal abdominal oblique muscle', 'middle', 'trunk', [HIP, ribs(10, 12)], { ...wall, tp: [0.4], via: 'front' }),
+  part('transversusAbdominis', 'Transversus abdominis muscle', 'deep', 'trunk', [HIP, [...range(7, 10).map(cartilage), ...ribs(11, 12)]], { ...wall, tp: [] }),
   part('pyramidalis', 'Pyramidalis muscle', 'superficial', 'trunk', [HIP, HIP], { tp: [] }),
   part('quadratusLumborum', 'Quadratus lumborum muscle', 'deep', 'trunk', [HIP, Ls(1, 4), [rib(12)]], { tp: [0.3, 0.75] }),
-  part('lineaAlba', 'Linea alba', 'superficial', 'trunk', [both(['Hip bone.{s}']), ['Xiphoid process']], { unsided: true, ...fascia, tp: [] }),
+  part('lineaAlba', 'Linea alba', 'superficial', 'trunk', [both(['Hip bone.{s}']), ['Xiphoid process']], { unsided: true, ...fascia, ...wall, tp: [] }),
   part('inguinalLigament', 'Inguinal ligament', 'superficial', 'trunk', [HIP, HIP], { ...fascia, tp: [] }),
 
   // ── 2A：骨盆底 ──

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { PARTS } from '../tools/parts.js';
-import { LINES, linePartIds } from '../src/trains/lines.js';
+import { LINES, linePartIds, linesPartIds } from '../src/trains/lines.js';
 import { PRESETS } from '../src/rig/presets.js';
 
 // content.js 是給瀏覽器用的一般 script（設定 window.CONTENT），在沙箱裡執行取出
@@ -45,6 +45,13 @@ test('linePartIds', () => {
   assert.ok(linePartIds('dfal').has('pecMinor'));
   assert.ok(linePartIds('spl').has('rhomboidMajor'));
   assert.equal(linePartIds('nope'), null);
+});
+
+test('複選列車線：部件取聯集，沒選線時為 null', () => {
+  const both = linesPartIds(['bfl', 'ifl']);
+  assert.ok(both.has('gluteusMaximus') && both.has('sartorius') && both.has('latissimus'));
+  assert.equal(both.size, new Set([...linePartIds('bfl'), ...linePartIds('ifl')]).size);
+  assert.equal(linesPartIds([]), null);
 });
 
 test('每個預設姿勢都有說明；鎖短、鎖長的痠痛提示都在', () => {

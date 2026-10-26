@@ -2,8 +2,8 @@
 //
 // 分左右的參數存成 'scapProtraction.l'、'scapProtraction.r'；頭頸、胸椎、骨盆在身體中線，不分左右。
 
-export const SIDED_PARAMS = ['scapProtraction', 'scapElevation', 'shoulderRotation', 'elbowFlexion', 'forearmPronation', 'wristFlexion', 'fingerFlexion', 'thumbFlexion', 'kneeFlexion', 'ankleFlexion', 'footInversion'];
-const MIDLINE_PARAMS = ['headForward', 'thoracicFlexion', 'pelvicTilt', 'pelvicObliquity'];
+export const SIDED_PARAMS = ['scapProtraction', 'scapElevation', 'shoulderRotation', 'elbowFlexion', 'forearmPronation', 'wristFlexion', 'fingerFlexion', 'thumbFlexion', 'hipFlexion', 'kneeFlexion', 'ankleFlexion', 'footInversion'];
+const MIDLINE_PARAMS = ['headForward', 'thoracicFlexion', 'pelvicTilt', 'pelvicObliquity', 'trunkFlexion', 'trunkSideBend', 'trunkRotation'];
 
 export const NEUTRAL = Object.freeze({
   ...Object.fromEntries(SIDED_PARAMS.flatMap(k => [[`${k}.l`, 0], [`${k}.r`, 0]])),
@@ -40,7 +40,10 @@ export const SLIDERS = [
   { key: 'headForward', group: 'sagittal', sided: false, label: '頭頸前移', minLabel: '後收', maxLabel: '前移' },
   { key: 'thoracicFlexion', group: 'sagittal', sided: false, label: '胸椎伸展／屈曲', minLabel: '伸展', maxLabel: '駝背' },
   { key: 'pelvicTilt', group: 'sagittal', sided: false, label: '骨盆後傾／前傾', minLabel: '後傾', maxLabel: '前傾' },
+  { key: 'trunkFlexion', group: 'sagittal', sided: false, label: '彎腰：後仰／前彎', minLabel: '後仰', maxLabel: '前彎' },
   { key: 'pelvicObliquity', group: 'frontal', sided: false, label: '骨盆側傾（長短腳）', minLabel: '右側低', maxLabel: '左側低' },
+  { key: 'trunkSideBend', group: 'frontal', sided: false, label: '彎腰：側彎', minLabel: '往右', maxLabel: '往左' },
+  { key: 'trunkRotation', group: 'frontal', sided: false, label: '彎腰：轉向', minLabel: '往右', maxLabel: '往左' },
   { key: 'scapProtraction', group: 'upperLimb', sided: true, label: '肩胛前伸／後縮', minLabel: '後縮', maxLabel: '前伸' },
   { key: 'scapElevation', group: 'upperLimb', sided: true, label: '肩胛上提／下壓', minLabel: '下壓', maxLabel: '上提' },
   { key: 'shoulderRotation', group: 'upperLimb', sided: true, label: '肩關節內旋／外旋', minLabel: '外旋', maxLabel: '內旋' },
@@ -49,6 +52,7 @@ export const SLIDERS = [
   { key: 'wristFlexion', group: 'upperLimb', sided: true, label: '手腕伸展／屈曲', minLabel: '伸展', maxLabel: '屈曲' },
   { key: 'fingerFlexion', group: 'upperLimb', sided: true, label: '手指伸直／握拳', minLabel: '過伸', maxLabel: '握拳' },
   { key: 'thumbFlexion', group: 'upperLimb', sided: true, label: '拇指伸展／屈曲', minLabel: '伸展', maxLabel: '屈曲' },
+  { key: 'hipFlexion', group: 'lowerLimb', sided: true, label: '大腿放下／抬起', minLabel: '往後', maxLabel: '抬起' },
   { key: 'kneeFlexion', group: 'lowerLimb', sided: true, label: '膝伸直／彎曲', minLabel: '過伸', maxLabel: '彎曲' },
   { key: 'ankleFlexion', group: 'lowerLimb', sided: true, label: '踝蹠屈／背屈', minLabel: '蹠屈', maxLabel: '背屈' },
   { key: 'footInversion', group: 'lowerLimb', sided: true, label: '足外翻／內翻', minLabel: '外翻', maxLabel: '內翻' },
@@ -56,7 +60,7 @@ export const SLIDERS = [
 
 export const SLIDER_GROUPS = [
   ['sagittal', '前後方向'],
-  ['frontal', '左右方向'],
+  ['frontal', '左右方向（側彎、轉向）'],
   ['upperLimb', '上肢（可分左右）'],
   ['lowerLimb', '下肢（可分左右）'],
 ];

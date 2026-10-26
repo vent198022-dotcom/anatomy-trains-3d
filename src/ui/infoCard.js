@@ -1,4 +1,4 @@
-// 右側說明卡：選取肌肉的中文說明、目前長度變化與痠痛點；沒選肌肉時顯示目前列車線的說明
+// 右側說明卡：選取肌肉的中文說明、目前長度變化與痠痛點；沒選肌肉時顯示目前列車線（可複選）的說明
 import { deltaText, lengthState, STATE_TEXT } from '../muscles/colors.js';
 import { LINES } from '../trains/lines.js';
 
@@ -8,9 +8,9 @@ export function initInfoCard(el, ctrl, content) {
   function render() {
     const key = ctrl.state.selectedKey;
     if (!key) {
-      const line = LINES.find(l => l.id === ctrl.activeLine);
-      el.innerHTML = line
-        ? `<h2>${line.name}</h2><p>${content.lines[line.name]}</p><p class="hint">點選線上的肌肉查看說明。</p>`
+      const lines = ctrl.activeLines.map(id => LINES.find(l => l.id === id));
+      el.innerHTML = lines.length
+        ? `${lines.map(line => `<h2>${line.name}</h2><p>${content.lines[line.name]}</p>`).join('')}<p class="hint">點選線上的肌肉查看說明；再點一次列車線可取消，「全部」清除。</p>`
         : '<p class="hint">點選肌肉、或從左側肌肉清單選取，查看說明。</p>';
       return;
     }

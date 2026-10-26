@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PointGrid, attachmentRegion, refineEnds, midBellyCentroid, centroidOf } from '../tools/lib/attach.mjs';
+import { PointGrid, attachmentRegion, refineEnds, midBellyCentroid, frontCentroid, centroidOf } from '../tools/lib/attach.mjs';
 
 // 固定種子的亂數，讓測試可重現
 function random(seed) {
@@ -47,4 +47,12 @@ test('refineEnds 只留靠近端點的附著頂點', () => {
 
 test('肌腹中段的平均位置', () => {
   assert.deepEqual(midBellyCentroid(muscle, [0, 1, 0], [10, 1, 0]), [5, 1, 0]);
+});
+
+test('肌肉中段最前方的頂點平均：腹斜肌往白線的纖維', () => {
+  // 沿 y 軸的肌肉：中段有兩個前方（z = 5）、十八個後方（z = 0）的頂點
+  const pts = [];
+  for (let i = 0; i < 20; i++) pts.push(0, 3 + i * 0.2, i < 2 ? 5 : 0);
+  const c = frontCentroid(new Float32Array(pts), [0, 0, 0], [0, 10, 0], 0.3, 0.7, 0.1);
+  assert.equal(c[2], 5);
 });

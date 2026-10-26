@@ -728,7 +728,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '軀幹前屈、側屈、轉向對側；增加腹內壓', nerve: '下 6 對胸神經（T7–T12）、髂腹下神經', lines: ['體側線', '螺旋線', '同側功能線'],
     lockedShort: '側彎凹側、軀幹長期轉向對側', lockedLong: '側彎凸側、骨盆前傾',
     painPoints: '肋弓下緣外側、髂嵴上方', referredPain: '上腹或下腹，像胃痛、腹股溝痛',
-    notes: '',
+    notes: '寬的扁平肌：側面纖維管側彎、往前方白線的纖維管轉身，模型各量一束取平均。往左轉時右側腹外斜肌縮短（對側旋轉）。',
   },
   internalOblique: {
     name: '腹內斜肌', en: 'Internal abdominal oblique', latin: 'Musculus obliquus internus abdominis',
@@ -736,7 +736,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '軀幹前屈、側屈、轉向同側；增加腹內壓', nerve: '下段胸神經、髂腹下與髂腹股溝神經', lines: ['體側線', '螺旋線'],
     lockedShort: '側彎凹側、軀幹長期轉向同側', lockedLong: '側彎凸側、骨盆前傾',
     painPoints: '髂嵴上方、下腹外側', referredPain: '下腹、腹股溝、恥骨上方',
-    notes: '',
+    notes: '模型的止點在第 10–12 肋後外側，連線方向與實際往前內上的纖維相反，所以只量經過前方的那一束。往左轉時左側腹內斜肌縮短（同側旋轉）。',
   },
   transversusAbdominis: {
     name: '腹橫肌', en: 'Transversus abdominis', latin: 'Musculus transversus abdominis',
@@ -924,7 +924,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '髖關節屈曲；腳固定時使腰椎前屈、側屈，穩定腰椎', nerve: '腰神經叢前枝（L1–L3）', lines: ['深前線'],
     lockedShort: '久坐（髖關節長時間屈曲）、骨盆前傾', lockedLong: '骨盆後傾、長期站立時髖過伸',
     painPoints: '肚臍外側深處（按壓時往下壓到腰椎旁）、腹股溝韌帶下方', referredPain: '同側腰椎旁一條縱向的下背痛，有時到大腿前上方',
-    notes: '依幾何計算，骨盆前傾時腰大肌長度變化很小（約 1%）：它從腰椎直接拉到股骨，骨盆轉動時兩端距離改變不大。臨床上「髂腰肌緊」多指久坐造成的適應性縮短與張力，請審閱。',
+    notes: '依幾何計算，骨盆前傾時腰大肌長度變化很小（約 1%）：它從腰椎直接拉到股骨，骨盆轉動時兩端距離改變不大。臨床上「髂腰肌緊」多指久坐造成的適應性縮短與張力，請審閱。大腿抬起 90° 時縮短約 11%；大腿往後伸時模型算出幾乎不變，肌腱繞過恥骨上緣的轉折沒有建模。',
   },
   iliacus: {
     name: '髂肌', en: 'Iliacus', latin: 'Musculus iliacus',
@@ -932,7 +932,7 @@ Object.assign(window.CONTENT.muscles, {
     action: '髖關節屈曲；腳固定時使骨盆前傾', nerve: '股神經（L2–L3）', lines: ['深前線'],
     lockedShort: '久坐、骨盆前傾', lockedLong: '骨盆後傾',
     painPoints: '髂前上棘內側、沿髂窩的深處', referredPain: '下背、薦髂關節、大腿前上方',
-    notes: '',
+    notes: '大腿往後伸時，模型算出的拉長很小（約 1%）：肌腱繞過恥骨上緣的轉折沒有建模。',
   },
   sartorius: {
     name: '縫匠肌', en: 'Sartorius', latin: 'Musculus sartorius',

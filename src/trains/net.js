@@ -76,26 +76,30 @@ function netMaterial(lift, rgb) {
   });
 }
 
-// parts：scene.js 建立的部件（{ info, rest, mesh, delta }）
-export function createNet(lineId, parts) {
-  const line = LINES.find(l => l.id === lineId);
+// lineIds：一條或多條列車線（可複選）；parts：scene.js 建立的部件（{ info, rest, mesh, delta }）
+export function createNet(lineIds, parts) {
+  const lines = [lineIds].flat().map(id => LINES.find(l => l.id === id));
   const shells = [];
-  const stations = { l: [], r: [] }; // 每側依序的站，每站是部件陣列
-  for (const side of ['l', 'r']) {
-    for (const st of line.stations) {
-      const s = st.opp ? OTHER[side] : side;
-      const list = st.ids.map(id => parts.find(q => q.info.id === id && (q.info.side === s || q.info.side === 'm')));
-      stations[side].push(list);
-      for (const part of list) {
-        if (shells.some(x => x.part === part)) continue; // 中線部件（橫膈）兩側共用
+  const routes = []; // 每條線、每一側依序的站（每站是部件陣列）；細帶只連同一條路線上相鄰的站
+  for (const line of lines) {
+    for (const side of ['l', 'r']) {
+      const route = [];
+      for (const st of line.stations) {
+        const s = st.opp ? OTHER[side] : side;
+        const list = st.ids.map(id => parts.find(q => q.info.id === id && (q.info.side === s || q.info.side === 'm')));
+        route.push(list);
+        for (const part of list) {
+          if (shells.some(x => x.part === part)) continue; // 中線部件（橫膈）、幾條線共用的部件只掛一層
         const geometry = part.mesh.geometry;
         if (!geometry.getAttribute('netCoord')) geometry.setAttribute('netCoord', new THREE.BufferAttribute(netCoords(part.rest, part.info.a, part.info.b), 3));
         const material = netMaterial(LIFT, NET_BLUE);
         const mesh = new THREE.Mesh(geometry, material);
         mesh.renderOrder = 5; // 畫在肌肉之後
-        part.mesh.add(mesh); // 掛在肌肉底下：跟著拆解位移、隱藏
-        shells.push({ part, mesh, material });
+          part.mesh.add(mesh); // 掛在肌肉底下：跟著拆解位移、隱藏
+          shells.push({ part, mesh, material });
+        }
       }
+      routes.push(route);
     }
   }
   const group = new THREE.Group(); // 站與站之間的細帶
@@ -113,9 +117,9 @@ export function createNet(lineId, parts) {
       material.uniforms.uColor.value.set(...rgb);
     }
     clearLinks();
-    for (const side of ['l', 'r']) {
+    for (const route of routes) {
       let prev = null; // 上一站兩端的平均位置
-      for (const list of stations[side]) {
+      for (const list of route) {
         const starts = [], ends = [];
         for (const part of list) {
           const o = offsetOf(part);

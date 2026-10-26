@@ -9,6 +9,7 @@ export const PALETTE = {
   same: [0.7, 0.68, 0.66],
   short: [0.86, 0.16, 0.12],
   long: [0.14, 0.4, 0.88],
+  selected: [0.72, 0.42, 1], // 點選中的肌肉（紫色，與肌肉色、紅、藍、灰都分得開）
 };
 
 export const STATE_TEXT = { short: '鎖短', long: '鎖長', same: '不變' };
@@ -23,6 +24,13 @@ export function lengthState(delta) {
   if (pct <= -THRESHOLD * 100) return 'short';
   if (pct >= THRESHOLD * 100) return 'long';
   return 'same';
+}
+
+// 肌肉的顯示顏色：選取中紫色；中立姿勢肌肉色；改變姿勢後依長度狀態（不計算長度的筋膜、肌腱灰色）
+export function partColor({ selected, poseActive, measure, delta }) {
+  if (selected) return PALETTE.selected.slice();
+  if (!poseActive) return PALETTE.natural.slice();
+  return measure ? lengthColor(delta) : PALETTE.same.slice();
 }
 
 export function lengthColor(delta) {
