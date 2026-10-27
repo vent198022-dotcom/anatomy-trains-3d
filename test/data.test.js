@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, statSync } from 'node:fs';
 import { PARTS } from '../tools/parts.js';
 import { SEGMENT_KEYS } from '../src/rig/segments.js';
+import { decodeMesh } from '../src/model/decode.js';
 
 const meta = JSON.parse(readFileSync('data/processed/meta.json', 'utf8'));
 const find = key => meta.parts.find(p => p.key === key);
@@ -46,6 +47,30 @@ test('斜方肌上、中、下部的高度順序正確', () => {
 
 test('右側在 −x、左側在 +x', () => {
   for (const p of meta.parts.filter(q => q.side !== 'm')) assert.ok(p.side === 'r' ? p.centroid[0] < 0 : p.centroid[0] > 0, p.key);
+});
+
+test('左右兩側的三角面朝向一致（鏡像的左側沒有翻成朝內）', () => {
+  const bytes = new Uint8Array(readFileSync('data/processed/meshes.bin'));
+  const facing = entry => {
+    const { positions: p, indices: idx } = decodeMesh(bytes, meta.quant, entry);
+    let v = 0;
+    for (let t = 0; t < idx.length; t += 3) {
+      const [a, b, c] = [idx[t] * 3, idx[t + 1] * 3, idx[t + 2] * 3];
+      v += p[a] * (p[b + 1] * p[c + 2] - p[b + 2] * p[c + 1]) - p[a + 1] * (p[b] * p[c + 2] - p[b + 2] * p[c]) + p[a + 2] * (p[b] * p[c + 1] - p[b + 1] * p[c]);
+    }
+    return Math.sign(v);
+  };
+  const pairs = [
+    ...meta.parts.filter(p => p.side === 'l').map(p => [p.key, p, find(p.key.replace(/\.l$/, '.r'))]),
+    ...meta.bones.filter(b => b.name.endsWith('.l')).map(b => [b.name, b, meta.bones.find(o => o.name === b.name.replace(/\.l$/, '.r'))]),
+  ];
+  let outward = 0;
+  for (const [name, l, r] of pairs) {
+    assert.ok(r, `${name} 找不到右側`);
+    assert.equal(facing(l), facing(r), name);
+    if (facing(l) > 0) outward++;
+  }
+  assert.ok(outward > pairs.length * 0.95, `朝外的只有 ${outward} / ${pairs.length}`);
 });
 
 test('關節位置合理', () => {

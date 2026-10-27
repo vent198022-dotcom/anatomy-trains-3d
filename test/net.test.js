@@ -1,8 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { netCoords, tubeNetCoords, createNet, NET_BLUE, NET_LIFT } from '../src/trains/net.js';
-import { MUSCLE_INFLATE } from '../src/model/scene.js';
+import { netCoords, tubeNetCoords, createNet, NET_BLUE } from '../src/trains/net.js';
 import { linePartIds } from '../src/trains/lines.js';
 import { lengthColor, PALETTE } from '../src/muscles/colors.js';
 
@@ -13,10 +12,6 @@ test('網格座標：第一個方向沿起點 → 止點，以網格間距為單
   assert.ok(Math.abs(c[1]) < 1e-6 && Math.abs(c[2]) < 1e-6);
   assert.ok(Math.abs(c[3]) < 1e-6, '垂直方向的點沿軸座標為 0');
   assert.ok(Math.abs(Math.hypot(c[4], c[5]) - 1) < 1e-6, '垂直距離 1.5 公分＝1 格');
-});
-
-test('網格外殼浮在外推後的肌肉表面之上', () => {
-  assert.ok(NET_LIFT > MUSCLE_INFLATE);
 });
 
 test('細帶的網格座標：沿長度一組、圓周四條縱線、第三組不畫線', () => {

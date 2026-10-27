@@ -23,6 +23,29 @@ test('worldGeometry 套用世界矩陣並合併重複頂點', () => {
   assert.equal(Math.max(...xs), 10.5);
 });
 
+// 封閉網格的有號體積：三角面朝外時為正
+function signedVolume({ positions: p, indices: idx }) {
+  let v = 0;
+  for (let t = 0; t < idx.length; t += 3) {
+    const [a, b, c] = [idx[t] * 3, idx[t + 1] * 3, idx[t + 2] * 3];
+    v += (p[a] * (p[b + 1] * p[c + 2] - p[b + 2] * p[c + 1]) - p[a + 1] * (p[b] * p[c + 2] - p[b + 2] * p[c]) + p[a + 2] * (p[b] * p[c + 1] - p[b + 1] * p[c])) / 6;
+  }
+  return v;
+}
+
+test('鏡像的網格（世界矩陣行列式為負）簡化後三角面翻回朝外', async () => {
+  // Z-Anatomy 的左側部件是右側的鏡像：直接套矩陣會讓三角面朝內，法向量指向肌肉裡面
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+  mesh.scale.set(-1, 1, 1);
+  mesh.updateMatrixWorld(true);
+  const world = worldGeometry(mesh);
+  assert.equal(world.mirrored, true);
+  assert.ok(Math.abs(signedVolume(await simplify(world, 1)) - 1) < 1e-6);
+  mesh.scale.set(1, 1, 1);
+  mesh.updateMatrixWorld(true);
+  assert.ok(Math.abs(signedVolume(await simplify(worldGeometry(mesh), 1)) - 1) < 1e-6, '沒有鏡像的不翻');
+});
+
 test('simplify 讓三角面數降到比例附近，索引都有效', async () => {
   const g = new THREE.SphereGeometry(10, 64, 32);
   g.deleteAttribute('normal');

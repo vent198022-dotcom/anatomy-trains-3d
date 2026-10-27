@@ -4,11 +4,10 @@ import * as THREE from 'three';
 import { partPath } from '../muscles/length.js';
 import { lengthColor, PALETTE } from '../muscles/colors.js';
 import { LINES } from './lines.js';
-import { MUSCLE_INFLATE } from '../model/scene.js';
 
 export const NET_BLUE = [0.36, 0.6, 0.96]; // 中立姿勢時的網色（sRGB）
 export const NET_SPACING = 1.5; // 網格間距（公分，中立姿勢）
-export const NET_LIFT = MUSCLE_INFLATE + 0.25; // 外殼浮出肌肉表面的距離（公分；肌肉顯示時已外推 MUSCLE_INFLATE）
+const LIFT = 0.25; // 外殼浮出肌肉表面的距離（公分）
 const LINK_RADIUS = 0.6;
 const OTHER = { l: 'r', r: 'l' };
 
@@ -93,7 +92,7 @@ export function createNet(lineIds, parts) {
           if (shells.some(x => x.part === part)) continue; // 中線部件（橫膈）、幾條線共用的部件只掛一層
         const geometry = part.mesh.geometry;
         if (!geometry.getAttribute('netCoord')) geometry.setAttribute('netCoord', new THREE.BufferAttribute(netCoords(part.rest, part.info.a, part.info.b), 3));
-        const material = netMaterial(NET_LIFT, NET_BLUE);
+        const material = netMaterial(LIFT, NET_BLUE);
         const mesh = new THREE.Mesh(geometry, material);
         mesh.renderOrder = 5; // 畫在肌肉之後
           part.mesh.add(mesh); // 掛在肌肉底下：跟著拆解位移、隱藏
