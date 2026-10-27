@@ -8,9 +8,10 @@ import { partColor } from '../muscles/colors.js';
 import { createDisplayState, partDisplay, partOffset, resetDisplay, restoreParts, painMarkerState } from './display.js';
 import { linesPartIds } from '../trains/lines.js';
 import { createNet } from '../trains/net.js';
+import { MUSCLE_INFLATE } from '../model/scene.js';
 
 const MARKER_COLORS = { focus: [1, 0.85, 0.2], short: [1, 0.4, 0.2], long: [0.4, 0.65, 1] };
-const MARKER_LIFT = 0.5; // 標記沿法向量浮出肌肉表面的距離（公分）
+const MARKER_LIFT = MUSCLE_INFLATE + 0.5; // 標記沿法向量浮出肌肉表面的距離（公分；肌肉顯示時已外推 MUSCLE_INFLATE）
 const SELECTED_EMISSIVE = [0.12, 0.05, 0.2]; // 選取的肌肉稍微自發光，在暗處也看得到紫色
 
 export function createController(viewer, model) {

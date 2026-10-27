@@ -14,6 +14,18 @@ function makeGeometry(positions, indices) {
 
 const MARKER_GEOMETRY = new THREE.SphereGeometry(0.7, 14, 10);
 
+// 肌肉表面沿法向量往外推再顯示（公分）：簡化後很薄的肌肉（頭皮的帽狀腱膜等）會被底下的骨頭穿出白點，外推後蓋住
+// 只影響畫面，不改資料、長度計算與點選；列車線的網、痠痛點標記也跟著浮高（見 net.js、controller.js）
+export const MUSCLE_INFLATE = 0.4;
+
+function inflate(material) {
+  material.onBeforeCompile = shader => {
+    shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+transformed += normalize(objectNormal) * ${MUSCLE_INFLATE.toFixed(2)};`);
+  };
+  material.customProgramCacheKey = () => 'muscle-inflate'; // 所有肌肉共用同一個著色器
+}
+
 // data：window.MODEL_DATA = { meta, bin（base64） }
 export function buildModel(data) {
   const { meta } = data;
@@ -36,6 +48,7 @@ export function buildModel(data) {
     geo.getAttribute('position').setUsage(THREE.DynamicDrawUsage);
     const material = new THREE.MeshStandardMaterial({ roughness: 0.55 });
     material.color.setRGB(...PALETTE.natural, THREE.SRGBColorSpace);
+    inflate(material);
     const mesh = new THREE.Mesh(geo, material);
     mesh.userData.partKey = info.key;
     mesh.frustumCulled = false; // 外接球在姿勢動畫中延後更新，用舊的外接球剔除會讓肌肉暫時消失
