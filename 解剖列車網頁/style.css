@@ -9,13 +9,14 @@
   --long: #79a8ff;
   --same: #b3ada8;
   --pain: #ffd23f;
+  --acu: #7fe3c8;
   --selected: #c79bff;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 320px;
+  grid-template-columns: 240px minmax(0, 1fr) 330px;
   grid-template-rows: auto minmax(50vh, 1fr) auto auto; /* 3D 視窗至少佔頁面高度的一半 */
   grid-template-areas: 'top top top' 'left view info' 'posture posture posture' 'credit credit credit';
   background: var(--bg);
@@ -65,13 +66,22 @@ button.active { background: var(--accent); border-color: var(--accent); color: #
 .hint, .posture-note { font-size: 13px; }
 
 .toggle { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
-.pain-toggle { margin-top: 6px; color: var(--pain); }
+.pain-modes { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin: 8px 0 6px; }
+.pain-modes .label { flex-basis: 100%; font-size: 13px; color: var(--pain); }
+.pain-modes button { padding: 1px 8px; font-size: 13px; }
 .slider { display: block; margin: 10px 0; color: var(--muted); }
 .slider input { width: 100%; }
 .hidden-list h3 { margin: 14px 0 6px; font-size: 14px; font-weight: 600; }
 .hidden-list ul { margin: 0 0 8px; padding: 0; list-style: none; }
 .hidden-list li { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 3px 0; font-size: 13px; }
 .hidden-list li button { flex: none; padding: 1px 8px; font-size: 12px; white-space: nowrap; }
+
+#meridianBar { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+#meridianBar h3 { margin: 8px 0 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+#meridianBar .row { display: flex; flex-wrap: wrap; gap: 4px; }
+#meridianBar .row button { display: inline-flex; align-items: center; gap: 5px; padding: 1px 7px; font-size: 13px; }
+#meridianBar .row button i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+#meridianBar [data-clear-meridians] { margin-top: 10px; padding: 1px 8px; font-size: 13px; }
 
 #muscleList { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
 #muscleList input[type='search'] { width: 100%; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
@@ -88,6 +98,7 @@ button.active { background: var(--accent); border-color: var(--accent); color: #
 #legend .long { color: var(--long); }
 #legend .same { color: var(--same); }
 #legend .pain { color: var(--pain); }
+#legend .acu { color: var(--acu); }
 #legend .selected { color: var(--selected); }
 #loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }
 
@@ -97,7 +108,8 @@ button.active { background: var(--accent); border-color: var(--accent); color: #
 .delta.short { background: rgba(220, 42, 31, 0.2); color: var(--short); }
 .delta.long { background: rgba(36, 102, 224, 0.22); color: var(--long); }
 .delta.same { background: rgba(179, 173, 168, 0.15); color: var(--same); }
-dl { display: grid; grid-template-columns: 4.5em 1fr; gap: 4px 8px; margin: 0; }
+dl { display: grid; grid-template-columns: 5.6em 1fr; gap: 4px 8px; margin: 0; }
+button.link { padding: 0 4px; border: 0; color: var(--acu); text-decoration: underline; }
 dt { color: var(--muted); }
 dd { margin: 0; }
 .pain-hint { margin-top: 10px; padding: 6px 10px; border-radius: 6px; font-size: 13px; }

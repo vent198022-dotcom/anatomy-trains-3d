@@ -17,7 +17,9 @@ export function createDisplayState() {
     explode: 0, // 0–1
     selectedKey: null,
     lineParts: null, // 目前列車線的部件 id 集合；null 表示沒選線
-    showPain: false, // 痠痛點開關
+    painMode: 'off', // 痠痛點：'off' 關閉、'posture' 只標鎖短／鎖長、'all' 全身都標
+    selectedPain: null, // 點到的痠痛點 { key, index }
+    overlay: false, // 穿透顯示：經脈與痠痛點不被肌肉擋住
   };
 }
 
@@ -56,13 +58,17 @@ export function resetDisplay(st) {
   st.pulled.clear();
   st.explode = 0;
   st.selectedKey = null;
+  st.selectedPain = null;
 }
 
-// 痠痛點要不要顯示、用哪種顏色：null（不顯示）、'focus'（選取的肌肉，姿勢中立）、'short'、'long'
-// 打開開關後：選取的肌肉一定顯示；姿勢改變時，所有鎖短／鎖長的肌肉自動標出
+// 痠痛點要不要顯示、用哪種顏色：null（不顯示）、'spot'（全身模式下的一般痠痛點）、
+// 'focus'（選取的肌肉，姿勢中立）、'short'、'long'
+// 'posture'：選取的肌肉一定顯示；姿勢改變時，所有鎖短／鎖長的肌肉自動標出
+// 'all'：所有看得到的肌肉都標出痠痛點，姿勢改變時鎖短、鎖長的仍用紅、藍
 export function painMarkerState(part, st, poseActive, delta) {
-  if (!st.showPain || !partDisplay(part, st).visible) return null;
+  if (st.painMode === 'off' || !partDisplay(part, st).visible) return null;
   const state = poseActive && part.measure ? lengthState(delta) : 'same';
   if (state !== 'same') return state;
-  return st.selectedKey === part.key ? 'focus' : null;
+  if (st.selectedKey === part.key) return 'focus';
+  return st.painMode === 'all' ? 'spot' : null;
 }

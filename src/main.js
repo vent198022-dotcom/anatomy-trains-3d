@@ -7,6 +7,7 @@ import { initMuscleList } from './ui/muscleList.js';
 import { initInfoCard } from './ui/infoCard.js';
 import { initPostureBar } from './ui/postureBar.js';
 import { initLineBar } from './ui/lineBar.js';
+import { initMeridianBar } from './ui/meridianBar.js';
 import { initViewBar } from './ui/viewBar.js';
 import { initPanPad } from './ui/panPad.js';
 
@@ -20,10 +21,12 @@ initMuscleList(document.getElementById('muscleList'), ctrl, window.CONTENT);
 initInfoCard(document.getElementById('info'), ctrl, window.CONTENT);
 initPostureBar(document.getElementById('postureBar'), ctrl, window.CONTENT);
 initLineBar(document.getElementById('lineBar'), ctrl);
+initMeridianBar(document.getElementById('meridianBar'), ctrl, window.CONTENT);
 initViewBar(document.getElementById('viewBar'), viewer);
 initPanPad(document.getElementById('panPad'), viewer);
 
-// 點一下選取肌肉（變紫色），再點同一條取消選取、恢復原本的顏色；拖曳旋轉不算點選；按下時讓 3D 視窗取得焦點，方向鍵才能平移
+// 點一下選取肌肉（變紫色）、穴位或痠痛點，再點同一個取消；拖曳旋轉不算點選
+// 按下時讓 3D 視窗取得焦點，方向鍵才能平移
 const canvas = viewer.renderer.domElement;
 let down = null;
 canvas.addEventListener('pointerdown', e => {
@@ -32,8 +35,10 @@ canvas.addEventListener('pointerdown', e => {
 });
 canvas.addEventListener('pointerup', e => {
   if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 5) {
-    const key = ctrl.pickAt(e.clientX, e.clientY);
-    ctrl.select(key && key === ctrl.state.selectedKey ? null : key);
+    const got = ctrl.pickAt(e.clientX, e.clientY);
+    if (got.kind === 'acupoint') ctrl.selectAcupoint(got.hit);
+    else if (got.kind === 'pain') ctrl.selectPain(got.pain);
+    else ctrl.select(got.key && got.key === ctrl.state.selectedKey ? null : (got.key ?? null));
   }
   down = null;
 });

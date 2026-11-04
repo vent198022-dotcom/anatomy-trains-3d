@@ -98,7 +98,7 @@ test('痠痛點：開關關閉時都不顯示', () => {
 
 test('痠痛點：姿勢改變時自動標出鎖短／鎖長的肌肉', () => {
   const st = createDisplayState();
-  st.showPain = true;
+  st.painMode = 'posture';
   assert.equal(painMarkerState(part, st, true, -0.14), 'short');
   assert.equal(painMarkerState(part, st, true, 0.08), 'long');
   assert.equal(painMarkerState(part, st, true, 0.01), null);
@@ -107,9 +107,19 @@ test('痠痛點：姿勢改變時自動標出鎖短／鎖長的肌肉', () => {
 
 test('痠痛點：選取的肌肉一定顯示；隱藏的肌肉不顯示', () => {
   const st = createDisplayState();
-  st.showPain = true;
+  st.painMode = 'posture';
   st.selectedKey = 'pecMinor.r';
   assert.equal(painMarkerState(part, st, false, 0), 'focus');
   st.hidden.add('pecMinor.r');
   assert.equal(painMarkerState(part, st, true, -0.2), null);
+});
+
+test('痠痛點：全身模式下，看得到的肌肉都標出來', () => {
+  const st = createDisplayState();
+  st.painMode = 'all';
+  assert.equal(painMarkerState(part, st, false, 0), 'spot');
+  assert.equal(painMarkerState({ ...part, measure: false }, st, true, -0.2), 'spot'); // 筋膜也標，只是不配長度色
+  assert.equal(painMarkerState(part, st, true, -0.14), 'short'); // 姿勢改變時仍用鎖短紅
+  st.hidden.add('pecMinor.r');
+  assert.equal(painMarkerState(part, st, false, 0), null);
 });

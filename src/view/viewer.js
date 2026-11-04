@@ -93,11 +93,13 @@ export function createViewer(container) {
     place(p, dir.toArray(), FOCUS_DISTANCE);
   }
 
+  const resizeHooks = [];
   const resize = () => {
     const w = container.clientWidth, h = container.clientHeight;
     renderer.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    for (const fn of resizeHooks) fn(w, h);
   };
   new ResizeObserver(resize).observe(container);
   resize();
@@ -111,6 +113,8 @@ export function createViewer(container) {
     return raycaster.intersectObjects(objects, false)[0] ?? null;
   }
   const pick = (clientX, clientY, objects) => hit(clientX, clientY, objects)?.object ?? null;
+  // 完整的交點（需要 InstancedMesh 的 instanceId 時用）
+  const pickHit = (clientX, clientY, objects) => hit(clientX, clientY, objects);
   // 點到的位置（設旋轉中心用）
   const pickPoint = (clientX, clientY, objects) => hit(clientX, clientY, objects)?.point.toArray() ?? null;
 
@@ -124,5 +128,12 @@ export function createViewer(container) {
     renderer.render(scene, camera);
   });
 
-  return { scene, camera, controls, renderer, pick, pickPoint, setView, showWholeBody, pan, recenter, center, lookAt, onFrame: fn => frameHooks.push(fn) };
+  return {
+    scene, camera, controls, renderer, pick, pickHit, pickPoint, setView, showWholeBody, pan, recenter, center, lookAt,
+    onFrame: fn => frameHooks.push(fn),
+    onResize(fn) {
+      resizeHooks.push(fn);
+      fn(container.clientWidth, container.clientHeight);
+    },
+  };
 }
