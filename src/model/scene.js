@@ -12,7 +12,8 @@ function makeGeometry(positions, indices) {
   return geo;
 }
 
-const MARKER_GEOMETRY = new THREE.SphereGeometry(0.7, 14, 10);
+// 痠痛點畫成八面體（菱形），和經脈穴位的小球一眼分得出來
+const MARKER_GEOMETRY = new THREE.OctahedronGeometry(0.8);
 
 // data：window.MODEL_DATA = { meta, bin（base64） }
 export function buildModel(data) {

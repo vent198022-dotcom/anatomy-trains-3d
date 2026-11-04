@@ -10,8 +10,12 @@ import { linesPartIds } from '../trains/lines.js';
 import { createNet } from '../trains/net.js';
 import { createMeridians } from '../meridians/render.js';
 import { densify, distanceToPath } from '../meridians/path.js';
+import { referredZones } from '../pain/zones.js';
+import { createReferredZones } from '../pain/referredRender.js';
 
-const MARKER_COLORS = { focus: [1, 0.85, 0.2], short: [1, 0.4, 0.2], long: [0.4, 0.65, 1], spot: [1, 0.62, 0.3] };
+// 痠痛點的顏色：刻意和經脈穴位（各自的經脈色，見 meridians.js）分開——痠痛點用洋紅、純紅、純藍、亮黃，
+// 而且是比較大的八面體；穴位是比較小的球，色系偏柔和，兩者一起顯示時不會混淆
+export const MARKER_COLORS = { focus: [1, 0.55, 0.78], short: [1, 0.23, 0.13], long: [0.12, 0.42, 1], spot: [1, 0.12, 0.48] };
 const MARKER_LIFT = 0.5; // 標記沿法向量浮出肌肉表面的距離（公分）
 const SELECTED_EMISSIVE = [0.12, 0.05, 0.2]; // 選取的肌肉稍微自發光，在暗處也看得到紫色
 const NEARBY_MERIDIAN = 7; // 痠痛點與經脈相距幾公分以內算「鄰近」（深層肌肉離體表的經脈比較遠，所以放寬一些）
@@ -29,6 +33,8 @@ export function createController(viewer, model) {
 
   const meridians = createMeridians();
   viewer.scene.add(meridians.group);
+  const referred = createReferredZones();
+  viewer.scene.add(referred.group);
   viewer.onResize((w, h) => meridians.setResolution(w, h));
 
   const poseActive = () => !isNeutral(params);
@@ -67,6 +73,7 @@ export function createController(viewer, model) {
     applyMarkers();
     updateNet();
     meridians.update(mats);
+    referred.update(mats);
   }
 
   function applyColors() {
@@ -169,6 +176,13 @@ export function createController(viewer, model) {
     return out.filter(x => !seen.has(x.meridian.id) && seen.add(x.meridian.id)).slice(0, limit);
   }
 
+  // 把目前選到的痠痛點的轉移痛範圍罩上去（沒選就收起來）
+  function applyReferred() {
+    const sel = state.selectedPain;
+    const part = sel && byKey.get(sel.key);
+    referred.show(part ? referredZones(part.info.id, part.info.side) : [], mats);
+  }
+
   // 痠痛點目前的世界座標；直接從肌肉網格算，不必等標記在下一幀才就位
   function painPosition(key, index) {
     const p = byKey.get(key);
@@ -209,7 +223,14 @@ export function createController(viewer, model) {
       return [...activeMeridians];
     },
     parts: model.parts,
+    referred,
     partByKey: key => byKey.get(key),
+    // 目前選到的痠痛點，痛可能會轉移到哪些區域
+    referredZonesOfSelection() {
+      const sel = state.selectedPain;
+      const part = sel && byKey.get(sel.key);
+      return part ? referredZones(part.info.id, part.info.side) : [];
+    },
     nearbyMeridians,
     painPosition,
     setParams(next) {
@@ -231,6 +252,7 @@ export function createController(viewer, model) {
     setPainMode(mode) {
       state.painMode = mode;
       if (mode === 'off') state.selectedPain = null;
+      applyReferred();
       applyMarkers();
       emit();
     },
@@ -247,12 +269,14 @@ export function createController(viewer, model) {
       else set.add(key);
       if (setName === 'hidden' && state.selectedKey === key) state.selectedKey = null;
       if (setName === 'hidden' && state.selectedPain?.key === key) state.selectedPain = null;
+      applyReferred();
       applyDisplay();
       emit();
     },
     select(key) {
       state.selectedKey = key;
       if (key) state.selectedPain = null;
+      applyReferred();
       applyDisplay();
       emit();
     },
@@ -264,6 +288,7 @@ export function createController(viewer, model) {
         state.selectedKey = null;
         meridians.select(null);
       }
+      applyReferred();
       applyDisplay();
       emit();
     },
@@ -276,6 +301,7 @@ export function createController(viewer, model) {
         state.selectedKey = null;
         state.selectedPain = null;
       }
+      applyReferred();
       applyDisplay();
       emit();
     },
@@ -288,6 +314,7 @@ export function createController(viewer, model) {
       if (!p) return;
       state.selectedKey = key;
       state.selectedPain = null;
+      applyReferred();
       viewer.lookAt(p.info.centroid);
       applyDisplay();
       emit();
@@ -320,6 +347,7 @@ export function createController(viewer, model) {
     reset() {
       resetDisplay(state);
       meridians.select(null);
+      applyReferred();
       applyDisplay();
       emit();
     },

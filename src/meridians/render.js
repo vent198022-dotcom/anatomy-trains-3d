@@ -7,10 +7,10 @@ import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { MERIDIANS, MERIDIAN_SIDES, meridianNodes } from './meridians.js';
 import { densify } from './path.js';
 
-export const DOT_RADIUS = 0.62; // 穴位小球半徑（公分）
+export const DOT_RADIUS = 0.5; // 穴位小球半徑（公分）；比痠痛點的八面體小，兩者好分辨
 export const LINE_WIDTH = 3.4; // 線寬（像素）
 const DOT_GEOMETRY = new THREE.SphereGeometry(DOT_RADIUS, 12, 8);
-const SELECTED_DOT = [1, 0.95, 0.45];
+const SELECTED_DOT = [1, 1, 1]; // 選到的穴位變白，不會和痠痛點的亮黃搞混
 
 export function createMeridians() {
   const group = new THREE.Group();

@@ -28,7 +28,7 @@ export function initDissectPanel(el, ctrl, content) {
     <label class="slider">爆炸圖<input type="range" min="0" max="1" step="0.01" value="0" data-explode></label>
     <button type="button" data-reset>復原</button>
     <div class="hidden-list"></div>
-    <p class="hint">關掉淺層就能看到中層；點選肌肉後可單獨隱藏、半透明或拉出。選「全身痠痛點」後，點橘色小球看那裡可能是什麼問題。</p>`;
+    <p class="hint">關掉淺層就能看到中層；點選肌肉後可單獨隱藏、半透明或拉出。選「全身痠痛點」後，點洋紅色的菱形點，看那裡可能是什麼問題，模型上也會罩出轉移痛的範圍。</p>`;
   const list = el.querySelector('.hidden-list');
 
   el.addEventListener('change', e => {

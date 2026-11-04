@@ -34,6 +34,7 @@ export const HUBS = {
 // 每個區段把穴位往外推離骨頭的距離（公分），讓點與線落在體表附近而不是埋在肌肉裡
 export const HUB_PUSH = { head: 0.6, neck: 1.6, chest: 1.4, belly: 1.6, pelvis: 1.8, arm: 1.6, forearm: 1.0, hand: 0.5, thigh: 2.0, shank: 1.2, foot: 0.5, none: 0 };
 
+// 顏色（sRGB 0–1）：14 條彼此分得開，而且整組避開痠痛點用的洋紅、純紅、純藍（見 app/controller.js 的 MARKER_COLORS）
 export const MERIDIANS = [
   {
     id: 'lu',
@@ -43,7 +44,7 @@ export const MERIDIANS = [
     organ: '肺',
     group: 'handYin',
     flow: '胸 → 手（拇指）',
-    color: [0.96, 0.94, 0.82],
+    color: [0.88, 0.92, 0.92], // 冷白
     points: [
       pt('LU1', '中府', 'thoraxUp', 'chest', 12.0, 135.5, 7.2, '第一肋間、鎖骨下窩外下方'),
       pt('LU2', '雲門', 'clavicle', 'chest', 13.2, 139.2, 4.6, '鎖骨下窩凹陷處'),
@@ -66,7 +67,7 @@ export const MERIDIANS = [
     organ: '大腸',
     group: 'handYang',
     flow: '手（食指）→ 頭面',
-    color: [0.98, 0.78, 0.45],
+    color: [0.97, 0.52, 0.12], // 橙
     points: [
       pt('LI1', '商陽', 'indexDist', 'none', 32.1, 71.3, 8.4, '食指橈側指甲角旁'),
       pt('LI2', '二間', 'indexProx', 'none', 31.4, 74.2, 6.2, '食指第二掌指關節橈側前方'),
@@ -98,7 +99,7 @@ export const MERIDIANS = [
     organ: '胃',
     group: 'footYang',
     flow: '頭面 → 足（第二趾）',
-    color: [0.99, 0.86, 0.3],
+    color: [0.88, 0.82, 0.22], // 金黃
     points: [
       pt('ST1', '承泣', 'head', 'head', 3.0, 157.4, 7.6, '瞳孔直下、眼眶下緣'),
       pt('ST2', '四白', 'head', 'head', 3.0, 156.4, 8.0, '承泣直下、眶下孔處'),
@@ -143,7 +144,7 @@ export const MERIDIANS = [
     organ: '脾',
     group: 'footYin',
     flow: '足（大趾）→ 胸腹',
-    color: [0.99, 0.72, 0.72],
+    color: [0.70, 0.45, 0.20], // 土褐
     points: [
       pt('SP1', '隱白', 'foot', 'none', 6.6, 1.8, 12.6, '足大趾內側趾甲角旁'),
       pt('SP2', '大都', 'foot', 'foot', 5.9, 2.4, 9.8, '足大趾本節前下方、赤白肉際'),
@@ -171,7 +172,7 @@ export const MERIDIANS = [
     organ: '心',
     group: 'handYin',
     flow: '胸 → 手（小指）',
-    color: [0.95, 0.4, 0.42],
+    color: [0.78, 0.16, 0.26], // 深朱紅
     points: [
       pt('HT1', '極泉', 'arm', 'arm', 14.4, 133.0, -1.0, '腋窩頂點、腋動脈搏動處'),
       pt('HT2', '青靈', 'arm', 'arm', 17.0, 117.0, 0.0, '肘橫紋上 3 寸、肱二頭肌內側溝'),
@@ -192,7 +193,7 @@ export const MERIDIANS = [
     organ: '小腸',
     group: 'handYang',
     flow: '手（小指）→ 頭面',
-    color: [0.98, 0.6, 0.3],
+    color: [0.95, 0.52, 0.45], // 珊瑚
     points: [
       pt('SI1', '少澤', 'littleDist', 'none', 22.6, 72.6, 8.0, '小指尺側指甲角旁'),
       pt('SI2', '前谷', 'littleProx', 'none', 22.4, 75.6, 5.0, '第五掌指關節尺側前方'),
@@ -223,7 +224,7 @@ export const MERIDIANS = [
     organ: '膀胱',
     group: 'footYang',
     flow: '頭面 → 背 → 足（小趾）',
-    color: [0.45, 0.62, 0.95],
+    color: [0.30, 0.70, 0.98], // 天藍
     points: [
       pt('BL1', '睛明', 'head', 'head', 1.4, 158.4, 7.4, '內眼角稍上方凹陷'),
       pt('BL2', '攢竹', 'head', 'head', 1.9, 160.4, 7.9, '眉頭凹陷中'),
@@ -263,7 +264,7 @@ export const MERIDIANS = [
     organ: '腎',
     group: 'footYin',
     flow: '足（足底）→ 胸腹',
-    color: [0.36, 0.44, 0.78],
+    color: [0.25, 0.32, 0.78], // 靛藍
     points: [
       pt('KI1', '湧泉', 'foot', 'foot', 7.5, 1.1, 4.4, '足底前 1/3 凹陷（屈趾時最凹處）'),
       pt('KI2', '然谷', 'foot', 'foot', 5.4, 3.4, 1.4, '舟骨粗隆下方、赤白肉際'),
@@ -292,7 +293,7 @@ export const MERIDIANS = [
     organ: '心包',
     group: 'handYin',
     flow: '胸 → 手（中指）',
-    color: [0.86, 0.52, 0.86],
+    color: [0.48, 0.34, 0.92], // 藍紫
     points: [
       pt('PC1', '天池', 'thoraxMid', 'chest', 12.0, 130.0, 8.6, '第四肋間、乳頭外側 1 寸'),
       pt('PC2', '天泉', 'arm', 'arm', 17.0, 128.0, 2.6, '腋前紋頭下 2 寸、肱二頭肌兩頭之間'),
@@ -313,7 +314,7 @@ export const MERIDIANS = [
     organ: '三焦',
     group: 'handYang',
     flow: '手（無名指）→ 頭面',
-    color: [0.65, 0.84, 0.5],
+    color: [0.62, 0.86, 0.25], // 黃綠
     points: [
       pt('TE1', '關衝', 'ringDist', 'none', 25.2, 71.4, 9.2, '無名指尺側指甲角旁'),
       pt('TE2', '液門', 'hand', 'hand', 25.0, 77.4, 4.4, '第四、五指縫端'),
@@ -346,7 +347,7 @@ export const MERIDIANS = [
     organ: '膽',
     group: 'footYang',
     flow: '頭面 → 體側 → 足（第四趾）',
-    color: [0.35, 0.78, 0.68],
+    color: [0.20, 0.82, 0.70], // 青綠
     points: [
       pt('GB1', '瞳子髎', 'head', 'head', 5.3, 158.4, 5.8, '外眼角外側凹陷'),
       pt('GB2', '聽會', 'head', 'head', 6.6, 156.4, 2.0, '耳屏間切跡前方、張口凹陷'),
@@ -387,7 +388,7 @@ export const MERIDIANS = [
     organ: '肝',
     group: 'footYin',
     flow: '足（大趾）→ 脅肋',
-    color: [0.4, 0.72, 0.42],
+    color: [0.20, 0.60, 0.30], // 深綠
     points: [
       pt('LR1', '大敦', 'foot', 'none', 8.9, 1.8, 12.6, '足大趾外側趾甲角旁'),
       pt('LR2', '行間', 'foot', 'foot', 8.5, 2.4, 9.0, '第一、二趾縫端'),
@@ -416,7 +417,7 @@ export const MERIDIANS = [
     group: 'extra',
     midline: true,
     flow: '會陰 → 下頷（前正中線）',
-    color: [0.98, 0.9, 0.55],
+    color: [0.96, 0.87, 0.60], // 象牙金
     points: [
       pt('CV1', '會陰', 'pelvis', 'pelvis', 0, 79.0, -1.0, '前後二陰之間'),
       pt('CV2', '曲骨', 'pelvis', 'pelvis', 0, 81.4, 4.4, '恥骨聯合上緣中點'),
@@ -446,7 +447,7 @@ export const MERIDIANS = [
     group: 'extra',
     midline: true,
     flow: '尾骨 → 頭頂 → 上唇（後正中線）',
-    color: [0.72, 0.68, 0.98],
+    color: [0.66, 0.70, 0.95], // 灰藍紫
     points: [
       pt('GV1', '長強', 'pelvis', 'pelvis', 0, 82.6, -8.0, '尾骨端與肛門連線中點'),
       pt('GV2', '腰俞', 'pelvis', 'pelvis', 0, 88.0, -8.6, '薦管裂孔中'),

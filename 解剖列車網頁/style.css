@@ -8,8 +8,9 @@
   --short: #ff7b72;
   --long: #79a8ff;
   --same: #b3ada8;
-  --pain: #ffd23f;
-  --acu: #7fe3c8;
+  --pain: #ff2e86;
+  --referred: #ff85b0;
+  --acu: #d8dee9;
   --selected: #c79bff;
 }
 * { box-sizing: border-box; }
@@ -99,6 +100,7 @@ button.active { background: var(--accent); border-color: var(--accent); color: #
 #legend .same { color: var(--same); }
 #legend .pain { color: var(--pain); }
 #legend .acu { color: var(--acu); }
+#legend .referred { color: var(--referred); }
 #legend .selected { color: var(--selected); }
 #loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }
 
@@ -112,6 +114,7 @@ dl { display: grid; grid-template-columns: 5.6em 1fr; gap: 4px 8px; margin: 0; }
 button.link { padding: 0 4px; border: 0; color: var(--acu); text-decoration: underline; }
 dt { color: var(--muted); }
 dd { margin: 0; }
+.zone-note { margin-left: 4px; font-size: 12px; color: var(--muted); }
 .pain-hint { margin-top: 10px; padding: 6px 10px; border-radius: 6px; font-size: 13px; }
 .pain-hint.short { background: rgba(220, 42, 31, 0.15); }
 .pain-hint.long { background: rgba(36, 102, 224, 0.15); }

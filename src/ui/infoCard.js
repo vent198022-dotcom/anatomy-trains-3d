@@ -56,6 +56,7 @@ function painCard(ctrl, content) {
   const nearText = near.length
     ? near.map(n => `<button type="button" class="link" data-meridian="${n.meridian.id}">${n.meridian.short}</button>`).join('、')
     : '附近沒有經過的經脈';
+  const zones = [...new Set(ctrl.referredZonesOfSelection().map(z => z.label))];
   const total = part.tps.length;
   return `
     <h2>痠痛點<span class="side">${c.name}　${SIDE_TEXT[part.info.side]}${total > 1 ? `　第 ${index + 1} 點` : ''}</span></h2>
@@ -65,6 +66,7 @@ function painCard(ctrl, content) {
       <dt>可能的問題</dt><dd>${content.problems[part.info.id] ?? '—'}</dd>
       <dt>痠痛位置</dt><dd>${c.painPoints}</dd>
       <dt>轉移痛</dt><dd>${c.referredPain}</dd>
+      <dt>標示範圍</dt><dd>${zones.length ? `${zones.join('、')}<span class="zone-note">（模型上用粉紅色半透明的球罩出來）</span>` : '沒有典型的轉移痛範圍'}</dd>
       <dt>常見鎖短</dt><dd>${c.lockedShort}</dd>
       <dt>常見鎖長</dt><dd>${c.lockedLong}</dd>
       <dt>列車線</dt><dd>${c.lines.length ? c.lines.join('、') : '—'}</dd>
