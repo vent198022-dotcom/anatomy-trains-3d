@@ -26,19 +26,28 @@ body {
 }
 #topbar { grid-area: top; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 8px 16px; border-bottom: 1px solid var(--line); }
 #topbar h1 { margin: 0 12px 0 0; font-size: 18px; font-weight: 600; }
-#lineBar, #meridianBar, #viewBar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+#lineBar, #meridianBar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 #lineBar button, #meridianBar button { padding: 3px 9px; flex: none; }
 /* 列車線與經脈各佔一列，都維持單列：畫面窄時左右捲動，不往下換行擠掉 3D 視窗 */
 #topbar { flex-wrap: nowrap; }
 #bars { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 #lineBar, #meridianBar { flex: none; min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
 #topbar h1, #lineBar .label, #meridianBar .label, #meridianBar .sep { flex: none; white-space: nowrap; }
+/* ── 可收合的工具列（列車線、經脈、姿勢、圖例） ── */
+.collapse-body { display: contents; } /* 展開時按鈕照樣排進外層的 flex */
+.collapsed .collapse-body { display: none; }
+.bar-toggle {
+  flex: none; padding: 2px 9px; font-size: 13px; white-space: nowrap;
+  border-color: var(--line); color: var(--muted); background: transparent;
+}
+.bar-toggle:hover, .bar-toggle:focus-visible { color: var(--text); border-color: var(--muted); }
+#postureBar.collapsed .posture-note, #postureBar.collapsed .slider-groups { display: none; }
+#postureBar.collapsed .presets { margin-bottom: 0; }
+#legend .bar-toggle { pointer-events: auto; background: rgba(0, 0, 0, 0.6); }
+
 #meridianBar button { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; }
 #meridianBar button i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
 #meridianBar .sep { width: 1px; height: 15px; background: var(--line); margin: 0 1px; }
-/* 視角鈕浮在 3D 視窗右上角 */
-#viewBar { position: absolute; top: 10px; right: 12px; z-index: 1; justify-content: flex-end; }
-#viewBar button { padding: 2px 10px; background: rgba(14, 17, 22, 0.72); }
 /* 左側面板：拆解固定在上面，肌肉清單自己吃掉剩下的高度並在框內捲動，整個面板就不會被撐長 */
 #left { grid-area: left; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
 /* 收合左右側欄：那一欄寬度收成 0，3D 視窗自動變寬（按鈕在視窗兩邊） */
@@ -164,11 +173,17 @@ dd { margin: 0; }
   #postureBar .slider-groups { max-height: none; }
   .joints-toggle { margin-left: 0; }
   #topbar, #lineBar, #meridianBar { flex-wrap: wrap; } /* 手機本來就要捲動頁面，換行比左右捲動好找 */
-  #bars { flex-basis: 100%; }
+  #topbar h1 { font-size: 16px; }
+  /* 兩列都收起來時並排成一行，只佔一列的高度；展開的那一列才獨佔整行 */
+  #bars { flex-basis: 100%; flex-direction: row; flex-wrap: wrap; gap: 4px 8px; }
+  #bars > nav { flex: 1 1 100%; }
+  #bars > nav.collapsed { flex: 0 0 auto; }
   #lineBar, #meridianBar { overflow-x: visible; }
   #left, #muscleList { display: block; }
   body.hide-left, body.hide-right, body.hide-left.hide-right { grid-template-columns: minmax(0, 1fr); }
-  .panel-toggle { top: 12px; margin-top: 0; }
+  /* 窄畫面的左右面板本來就排在 3D 視窗下面，不會擋到模型，收合箭頭反而讓人以為按了沒反應 */
+  .panel-toggle { display: none; }
+  #legend { max-width: calc(100% - 24px); }
   .muscle-rows { min-height: 0; overflow-y: visible; }
   .slider-group.wide { grid-column: auto; grid-template-columns: minmax(0, 1fr); }
   #panPad { bottom: 48px; } /* 窄畫面的圖例佔滿下緣，平移鍵移到它上面 */

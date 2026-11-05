@@ -1,6 +1,7 @@
 // 下方姿勢列：預設姿勢（切換時播放動畫）、播放鍵、姿勢說明；分組的關節滑桿平常收起，按「調整關節」才展開
 // （上肢、下肢可兩側一起或只調一側，兩組共用同一個設定）
 import { PRESETS, SLIDERS, SLIDER_GROUPS, SIDE_MODES, NEUTRAL, lerpParams, easeInOut, snapSlider, isNeutral, sliderValue, setSlider } from '../rig/presets.js';
+import { initCollapsible, isNarrow } from './collapsible.js';
 
 const DURATION = 1500; // 毫秒
 const OPEN_KEY = 'anatomyTrains3d.jointsOpen'; // 滑桿是否展開（只存在這台電腦的瀏覽器）
@@ -21,7 +22,7 @@ function saveOpen(open) {
   }
 }
 
-export function initPostureBar(el, ctrl, content) {
+export function initPostureBar(el, ctrl, content, onToggle) {
   let active = 'neutral'; // 目前的預設姿勢；拖過滑桿後為 null（自訂）
   let mode = 'both'; // 分左右滑桿的調整方式：'both'、'l'、'r'
   let frame = 0;
@@ -30,10 +31,12 @@ export function initPostureBar(el, ctrl, content) {
     `<label><span>${s.label}</span><small>${s.minLabel}</small><input type="range" min="-1" max="1" step="0.01" value="0" data-param="${s.key}"><small>${s.maxLabel}</small></label>`;
   el.innerHTML = `
     <div class="presets">
-      <span class="label">姿勢</span>
-      ${Object.entries(PRESETS).map(([k, p]) => `<button type="button" data-preset="${k}">${p.label}</button>`).join('')}
-      <button type="button" data-play>▶ 播放</button>
-      <button type="button" class="joints-toggle" data-joints aria-expanded="false"></button>
+      <button type="button" class="bar-toggle" data-collapse="姿勢"></button>
+      <span class="collapse-body">
+        ${Object.entries(PRESETS).map(([k, p]) => `<button type="button" data-preset="${k}">${p.label}</button>`).join('')}
+        <button type="button" data-play>▶ 播放</button>
+        <button type="button" class="joints-toggle" data-joints aria-expanded="false"></button>
+      </span>
     </div>
     <p class="posture-note"></p>
     <div class="slider-groups">
@@ -101,4 +104,5 @@ export function initPostureBar(el, ctrl, content) {
   }
   ctrl.onChange(sync);
   sync();
+  initCollapsible(el, 'anatomyTrains3d.postureBarOpen', { collapsedByDefault: isNarrow(), onToggle });
 }

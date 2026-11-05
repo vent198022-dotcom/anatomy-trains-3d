@@ -1,8 +1,9 @@
 // 上方「經脈」列：十四經脈切換（可複選），點一條就在身上畫出走向與常用穴位
 // 排法與列車線那一列相同：窄畫面時左右捲動，不往下換行擠掉 3D 視窗
 import { MERIDIANS, MERIDIAN_GROUPS } from '../meridians/meridians.js';
+import { initCollapsible, isNarrow } from './collapsible.js';
 
-export function initMeridianBar(el, ctrl) {
+export function initMeridianBar(el, ctrl, onToggle) {
   const groupLabel = Object.fromEntries(MERIDIAN_GROUPS);
   const button = m =>
     `<button type="button" data-meridian="${m.id}" title="${m.name}（${groupLabel[m.group]}）：${m.flow}"><i style="background:rgb(${m.color
@@ -11,9 +12,10 @@ export function initMeridianBar(el, ctrl) {
 
   // 依手三陰、手三陽、足三陽、足三陰、任督的順序排，中間用細線隔開
   const groups = MERIDIAN_GROUPS.map(([key]) => MERIDIANS.filter(m => m.group === key).map(button).join(''));
-  el.innerHTML = `<span class="label">經脈</span><button type="button" data-clear-meridians>不顯示</button>${groups
+  el.innerHTML = `<button type="button" class="bar-toggle" data-collapse="經脈"></button><span class="collapse-body"><button type="button" data-clear-meridians>不顯示</button>${groups
     .map(g => `<span class="sep"></span>${g}`)
-    .join('')}`;
+    .join('')}</span>`;
+  initCollapsible(el, 'anatomyTrains3d.meridianBarOpen', { collapsedByDefault: isNarrow(), onToggle });
 
   el.addEventListener('click', e => {
     const btn = e.target.closest('button');

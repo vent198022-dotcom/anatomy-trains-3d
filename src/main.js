@@ -8,9 +8,9 @@ import { initInfoCard } from './ui/infoCard.js';
 import { initPostureBar } from './ui/postureBar.js';
 import { initLineBar } from './ui/lineBar.js';
 import { initMeridianBar } from './ui/meridianBar.js';
-import { initViewBar } from './ui/viewBar.js';
 import { initPanPad } from './ui/panPad.js';
 import { initPanelToggle } from './ui/panelToggle.js';
+import { initCollapsible, isNarrow } from './ui/collapsible.js';
 
 const viewer = createViewer(document.getElementById('viewport'));
 const model = buildModel(window.MODEL_DATA);
@@ -20,12 +20,13 @@ const ctrl = createController(viewer, model);
 initDissectPanel(document.getElementById('dissect'), ctrl, window.CONTENT);
 initMuscleList(document.getElementById('muscleList'), ctrl, window.CONTENT);
 initInfoCard(document.getElementById('info'), ctrl, window.CONTENT);
-initPostureBar(document.getElementById('postureBar'), ctrl, window.CONTENT);
-initLineBar(document.getElementById('lineBar'), ctrl);
-initMeridianBar(document.getElementById('meridianBar'), ctrl, window.CONTENT);
-initViewBar(document.getElementById('viewBar'), viewer);
+const refit = () => viewer.resize(); // 收合任何一列之後，3D 視窗的高度或寬度會變
+initPostureBar(document.getElementById('postureBar'), ctrl, window.CONTENT, refit);
+initLineBar(document.getElementById('lineBar'), ctrl, refit);
+initMeridianBar(document.getElementById('meridianBar'), ctrl, refit);
 initPanPad(document.getElementById('panPad'), viewer);
 initPanelToggle(document.getElementById('viewport'), viewer);
+initCollapsible(document.getElementById('legend'), 'anatomyTrains3d.legendOpen', { collapsedByDefault: isNarrow() });
 
 // 點一下選取肌肉（變紫色）、穴位或痠痛點，再點同一個取消；拖曳旋轉不算點選
 // 按下時讓 3D 視窗取得焦點，方向鍵才能平移
