@@ -1,9 +1,17 @@
-// 轉移痛範圍的 3D 標示：點選痠痛點後，在可能痛到的區域罩上一顆半透明的球
-// 球綁在骨段上，姿勢改變時跟著身體走；而且一律畫在最上層——轉移痛常在身體深處或另一面，
-// 被肌肉擋住就失去意義，所以不跟著「穿透顯示」開關走。
+// 轉移痛範圍的「備援」標示：主要畫法是把範圍染在肌肉表面（見 pain/paint.js），
+// 只有那一塊完全沒有東西可以染時（關節腔、體腔內，或那一層被關掉了），才退回用半透明的球罩出來。
+// 球綁在骨段上，姿勢改變時跟著身體走；而且一律畫在最上層，不跟著「穿透顯示」開關走。
 import * as THREE from 'three';
 
-export const ZONE_COLOR = [1, 0.38, 0.62]; // 淡洋紅：和痠痛點同一個色系，但是一團而不是一點
+// 依「痛感覺起來有多深」上色（不是肌肉層次，轉移痛不屬於任何一層肌肉）。
+// 三個顏色要染在紅褐色的肌肉上，所以選亮度、色相都差很多的一組：黃 → 橙 → 洋紅紫，愈深愈濃。
+// 也避開肌肉本身會用到的紅（鎖短）、藍（鎖長）、紫（選取中）。
+export const ZONE_COLORS = {
+  surface: [1, 0.92, 0.25], // 表淺：檸檬黃
+  mid: [1, 0.52, 0.08], // 肌肉層：亮橙
+  deep: [0.85, 0.12, 0.72], // 深處：洋紅紫
+};
+export const ZONE_COLOR = ZONE_COLORS.mid;
 export const ZONE_OPACITY = 0.22;
 const EDGE_OPACITY = 0.55;
 const ZONE_GEOMETRY = new THREE.SphereGeometry(1, 20, 14); // 半徑 1，再用 scale 放大成各區域的大小
@@ -19,7 +27,6 @@ function material(opacity, wireframe) {
     side: THREE.DoubleSide, // 相機進到球裡面時仍然看得到
     toneMapped: false,
   });
-  m.color.setRGB(...ZONE_COLOR, THREE.SRGBColorSpace);
   return m;
 }
 
@@ -53,9 +60,11 @@ export function createReferredZones() {
       const z = shown[i];
       point.fromArray(z.pos);
       if (mats) point.applyMatrix4(mats.get(z.seg) ?? identity);
+      const rgb = ZONE_COLORS[z.depth] ?? ZONE_COLORS.mid;
       for (const m of pair(i)) {
         m.position.copy(point);
         m.scale.setScalar(z.radius);
+        m.material.color.setRGB(...rgb, THREE.SRGBColorSpace);
         m.visible = true;
       }
     }

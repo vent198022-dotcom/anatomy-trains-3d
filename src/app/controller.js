@@ -11,14 +11,18 @@ import { createNet } from '../trains/net.js';
 import { createMeridians } from '../meridians/render.js';
 import { densify, distanceToPath } from '../meridians/path.js';
 import { referredZones } from '../pain/zones.js';
-import { createReferredZones } from '../pain/referredRender.js';
+import { createReferredZones, ZONE_COLORS } from '../pain/referredRender.js';
+import { restBounds, zoneWeights, dominantZone } from '../pain/paint.js';
 
 // 痠痛點的顏色：刻意和經脈穴位（各自的經脈色，見 meridians.js）分開——痠痛點用洋紅、純紅、純藍、亮黃，
 // 而且是比較大的八面體；穴位是比較小的球，色系偏柔和，兩者一起顯示時不會混淆
 export const MARKER_COLORS = { focus: [1, 0.55, 0.78], short: [1, 0.23, 0.13], long: [0.12, 0.42, 1], spot: [1, 0.12, 0.48] };
+// 痠痛點的大小看它長在哪一層肌肉上：淺層最大、深層最小，一眼就分得出深淺
+export const LAYER_SCALE = { superficial: 1, middle: 0.74, deep: 0.54 };
 const MARKER_LIFT = 0.5; // 標記沿法向量浮出肌肉表面的距離（公分）
 const SELECTED_EMISSIVE = [0.12, 0.05, 0.2]; // 選取的肌肉稍微自發光，在暗處也看得到紫色
 const NEARBY_MERIDIAN = 7; // 痠痛點與經脈相距幾公分以內算「鄰近」（深層肌肉離體表的經脈比較遠，所以放寬一些）
+const NEARBY_ACUPOINT = 6; // 痠痛點與穴位相距幾公分以內算「附近的穴位」
 
 export function createController(viewer, model) {
   const state = createDisplayState();
@@ -67,6 +71,7 @@ export function createController(viewer, model) {
       p.delta = lengthDelta(p.info, mats);
     }
     pathCache = null;
+    acupointCache = null;
     clearTimeout(finishTimer);
     finishTimer = setTimeout(finishPose, 120);
     applyColors();
@@ -116,7 +121,7 @@ export function createController(viewer, model) {
         marker.material.depthTest = !state.overlay;
         const chosen = state.selectedPain && state.selectedPain.key === p.info.key && state.selectedPain.index === i;
         if (kind) marker.material.color.setRGB(...(chosen ? MARKER_COLORS.focus : MARKER_COLORS[kind]), THREE.SRGBColorSpace);
-        marker.scale.setScalar(chosen ? 1.6 : 1);
+        marker.scale.setScalar(LAYER_SCALE[p.info.layer] * (chosen ? 1.8 : 1));
       }
     }
   }
@@ -161,6 +166,17 @@ export function createController(viewer, model) {
     emit();
   }
 
+  // 某個位置附近有哪些穴位（距離近的排前面）：中醫的「近取」就從這些穴位找起
+  let acupointCache = null;
+  function nearbyAcupoints(position, limit = 4) {
+    acupointCache ??= meridians.allAcupoints(mats);
+    return acupointCache
+      .map(a => ({ ...a, distance: Math.hypot(position[0] - a.pos[0], position[1] - a.pos[1], position[2] - a.pos[2]) }))
+      .filter(a => a.distance <= NEARBY_ACUPOINT)
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, limit);
+  }
+
   // 某個位置附近經過哪些經脈（距離近的排前面）；折線算一次就好，姿勢改變時才重算
   let pathCache = null;
   function nearbyMeridians(position, limit = 3) {
@@ -176,11 +192,54 @@ export function createController(viewer, model) {
     return out.filter(x => !seen.has(x.meridian.id) && seen.add(x.meridian.id)).slice(0, limit);
   }
 
-  // 把目前選到的痠痛點的轉移痛範圍罩上去（沒選就收起來）
+  // 把目前選到的痠痛點的轉移痛範圍染在肌肉（與骨頭）表面；染不到的地方才退回用球標示。
+  // 權重在中立姿勢的頂點上算，所以只有選取、分層、隱藏改變時才要重算，姿勢動的時候不必。
+  const paintedGeometries = [];
+  const paintedMaterials = [];
+
+  function clearPaint() {
+    for (const g of paintedGeometries) g.deleteAttribute('aReferred');
+    paintedGeometries.length = 0;
+    for (const m of paintedMaterials) m.userData.referredColor.value.setRGB(1, 1, 1);
+    paintedMaterials.length = 0;
+  }
+
   function applyReferred() {
+    clearPaint();
     const sel = state.selectedPain;
     const part = sel && byKey.get(sel.key);
-    referred.show(part ? referredZones(part.info.id, part.info.side) : [], mats);
+    const zones = part ? referredZones(part.info.id, part.info.side) : [];
+    if (!zones.length) {
+      referred.show([], mats);
+      return;
+    }
+
+    const painted = new Set(); // 真的染到色的區域
+    const paint = (geometry, rest, bounds, material) => {
+      const got = zoneWeights(rest, bounds, zones);
+      if (!got) return;
+      geometry.setAttribute('aReferred', new THREE.BufferAttribute(got.weights, 1));
+      paintedGeometries.push(geometry);
+      const zone = dominantZone(bounds, zones, got.hit);
+      material.userData.referredColor.value.setRGB(...(ZONE_COLORS[zone.depth] ?? ZONE_COLORS.mid), THREE.SRGBColorSpace);
+      if (!paintedMaterials.includes(material)) paintedMaterials.push(material);
+      for (const i of got.hit) painted.add(i);
+    };
+
+    for (const p of model.parts) {
+      if (!p.mesh.visible) continue; // 關掉的那一層不染，免得看不到卻以為染了
+      p.restBounds ??= restBounds(p.rest);
+      paint(p.mesh.geometry, p.rest, p.restBounds, p.mesh.material);
+    }
+    if (state.layers.bones) {
+      for (const b of model.bones) {
+        const rest = b.mesh.geometry.getAttribute('position').array;
+        b.restBounds ??= restBounds(rest);
+        paint(b.mesh.geometry, rest, b.restBounds, model.boneMaterial);
+      }
+    }
+    // 關節內、體腔內，或那一層被關掉而染不到的區域，仍然用半透明的球標出來，資訊才不會不見
+    referred.show(zones.filter((_, i) => !painted.has(i)), mats);
   }
 
   // 痠痛點目前的世界座標；直接從肌肉網格算，不必等標記在下一幀才就位
@@ -232,6 +291,7 @@ export function createController(viewer, model) {
       return part ? referredZones(part.info.id, part.info.side) : [];
     },
     nearbyMeridians,
+    nearbyAcupoints,
     painPosition,
     setParams(next) {
       params = { ...params, ...next };
@@ -241,6 +301,7 @@ export function createController(viewer, model) {
     setLayer(layer, on) {
       state.layers[layer] = on;
       applyDisplay();
+      applyReferred(); // 換一層之後能染到的部件不一樣
       emit();
     },
     setExplode(value) {
@@ -252,8 +313,8 @@ export function createController(viewer, model) {
     setPainMode(mode) {
       state.painMode = mode;
       if (mode === 'off') state.selectedPain = null;
-      applyReferred();
       applyMarkers();
+      applyReferred();
       emit();
     },
     setOverlay(on) {
@@ -269,15 +330,15 @@ export function createController(viewer, model) {
       else set.add(key);
       if (setName === 'hidden' && state.selectedKey === key) state.selectedKey = null;
       if (setName === 'hidden' && state.selectedPain?.key === key) state.selectedPain = null;
-      applyReferred();
       applyDisplay();
+      applyReferred();
       emit();
     },
     select(key) {
       state.selectedKey = key;
       if (key) state.selectedPain = null;
-      applyReferred();
       applyDisplay();
+      applyReferred();
       emit();
     },
     // 點選痠痛點：說明卡換成那個痠痛點的內容；再點一次取消
@@ -288,8 +349,8 @@ export function createController(viewer, model) {
         state.selectedKey = null;
         meridians.select(null);
       }
-      applyReferred();
       applyDisplay();
+      applyReferred();
       emit();
     },
     // 點選穴位：說明卡換成那個穴位的內容；再點一次取消
@@ -301,8 +362,8 @@ export function createController(viewer, model) {
         state.selectedKey = null;
         state.selectedPain = null;
       }
-      applyReferred();
       applyDisplay();
+      applyReferred();
       emit();
     },
     get selectedAcupoint() {
@@ -314,9 +375,9 @@ export function createController(viewer, model) {
       if (!p) return;
       state.selectedKey = key;
       state.selectedPain = null;
-      applyReferred();
       viewer.lookAt(p.info.centroid);
       applyDisplay();
+      applyReferred();
       emit();
     },
     // 點一條列車線：沒選就加入、已選就移除（可複選）
@@ -347,14 +408,15 @@ export function createController(viewer, model) {
     reset() {
       resetDisplay(state);
       meridians.select(null);
-      applyReferred();
       applyDisplay();
+      applyReferred();
       emit();
     },
     // 把隱藏、半透明的部件全部顯示回來
     restoreParts() {
       restoreParts(state);
       applyDisplay();
+      applyReferred();
       emit();
     },
     // 點一下 3D 視窗：先看有沒有點到穴位或痠痛點（畫在肌肉外面），沒有才算點到肌肉

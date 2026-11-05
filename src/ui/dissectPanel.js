@@ -19,16 +19,16 @@ export const PAIN_MODES = [
 export function initDissectPanel(el, ctrl, content) {
   el.innerHTML = `
     <h2>拆解</h2>
-    ${TOGGLES.map(([k, label]) => `<label class="toggle"><input type="checkbox" data-layer="${k}" checked>${label}</label>`).join('')}
+    <div class="layers">${TOGGLES.map(([k, label]) => `<label class="toggle"><input type="checkbox" data-layer="${k}" checked>${label}</label>`).join('')}</div>
     <div class="pain-modes">
       <span class="label">痠痛點</span>
       ${PAIN_MODES.map(([k, label]) => `<button type="button" data-pain="${k}">${label}</button>`).join('')}
     </div>
-    <label class="toggle"><input type="checkbox" data-overlay>穿透顯示（經脈、痠痛點不被肌肉擋住）</label>
+    <label class="toggle" title="經脈與痠痛點不會被肌肉擋住，背面的也看得到"><input type="checkbox" data-overlay>穿透顯示</label>
     <label class="slider">爆炸圖<input type="range" min="0" max="1" step="0.01" value="0" data-explode></label>
     <button type="button" data-reset>復原</button>
     <div class="hidden-list"></div>
-    <p class="hint">關掉淺層就能看到中層；點選肌肉後可單獨隱藏、半透明或拉出。選「全身痠痛點」後，點洋紅色的菱形點，看那裡可能是什麼問題，模型上也會罩出轉移痛的範圍。</p>`;
+    <p class="hint">關掉淺層看中層；點選肌肉可隱藏、半透明或拉出。「全身痠痛點」的菱形愈大代表肌肉愈淺層，點它看可能的問題與轉移痛範圍。</p>`;
   const list = el.querySelector('.hidden-list');
 
   el.addEventListener('change', e => {

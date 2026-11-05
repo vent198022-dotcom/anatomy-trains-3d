@@ -130,6 +130,7 @@ export function createViewer(container) {
 
   return {
     scene, camera, controls, renderer, pick, pickHit, pickPoint, setView, showWholeBody, pan, recenter, center, lookAt,
+    resize, // 收合側欄之後直接叫一次（ResizeObserver 在分頁隱藏時不保證會跑）
     onFrame: fn => frameHooks.push(fn),
     onResize(fn) {
       resizeHooks.push(fn);

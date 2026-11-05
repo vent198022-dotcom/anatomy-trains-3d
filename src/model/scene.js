@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { base64ToBytes, decodeMesh } from './decode.js';
 import { prepareDeform } from '../muscles/deform.js';
 import { PALETTE } from '../muscles/colors.js';
+import { PAINT_STRENGTH, PAINT_GLOW } from '../pain/paint.js';
 
 function makeGeometry(positions, indices) {
   const geo = new THREE.BufferGeometry();
@@ -15,13 +16,43 @@ function makeGeometry(positions, indices) {
 // 痠痛點畫成八面體（菱形），和經脈穴位的小球一眼分得出來
 const MARKER_GEOMETRY = new THREE.OctahedronGeometry(0.8);
 
+// 讓材質可以被「轉移痛」染色：每個頂點多一個 0–1 的權重 aReferred，權重愈大顏色愈往 uReferredColor 混。
+// 沒有設定這個屬性的網格，WebGL 會給 0，等於不染色，所以只有真的染到的部件才需要加屬性。
+function paintable(material) {
+  material.userData.referredColor = { value: new THREE.Color(1, 1, 1) };
+  material.onBeforeCompile = shader => {
+    shader.uniforms.uReferredColor = material.userData.referredColor;
+    shader.vertexShader = `attribute float aReferred;
+varying float vReferred;
+${shader.vertexShader}`.replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+  vReferred = aReferred;`,
+    );
+    shader.fragmentShader = `uniform vec3 uReferredColor;
+varying float vReferred;
+${shader.fragmentShader}`.replace(
+      '#include <color_fragment>',
+      `#include <color_fragment>
+  float referred = clamp(vReferred, 0.0, 1.0);
+  diffuseColor.rgb = mix(diffuseColor.rgb, uReferredColor, referred * ${PAINT_STRENGTH.toFixed(2)});`,
+    ).replace(
+      // 再加一點自發光，染色才不會被打光壓暗、背光處也看得到
+      'vec3 totalEmissiveRadiance = emissive;',
+      `vec3 totalEmissiveRadiance = emissive + uReferredColor * clamp(vReferred, 0.0, 1.0) * ${PAINT_GLOW.toFixed(2)};`,
+    );
+  };
+  material.customProgramCacheKey = () => 'referred'; // 所有部件共用同一支著色器
+  return material;
+}
+
 // data：window.MODEL_DATA = { meta, bin（base64） }
 export function buildModel(data) {
   const { meta } = data;
   const bytes = base64ToBytes(data.bin);
   const group = new THREE.Group();
 
-  const boneMaterial = new THREE.MeshStandardMaterial({ color: 0xe9e0cc, roughness: 0.75 });
+  const boneMaterial = paintable(new THREE.MeshStandardMaterial({ color: 0xe9e0cc, roughness: 0.75 }));
   const bones = meta.bones.map(b => {
     const { positions, indices } = decodeMesh(bytes, meta.quant, b);
     const mesh = new THREE.Mesh(makeGeometry(positions, indices), boneMaterial);
@@ -35,7 +66,7 @@ export function buildModel(data) {
     const { positions, indices, skin } = decodeMesh(bytes, meta.quant, info);
     const geo = makeGeometry(positions.slice(), indices);
     geo.getAttribute('position').setUsage(THREE.DynamicDrawUsage);
-    const material = new THREE.MeshStandardMaterial({ roughness: 0.55 });
+    const material = paintable(new THREE.MeshStandardMaterial({ roughness: 0.55 }));
     material.color.setRGB(...PALETTE.natural, THREE.SRGBColorSpace);
     const mesh = new THREE.Mesh(geo, material);
     mesh.userData.partKey = info.key;
@@ -64,5 +95,5 @@ export function buildModel(data) {
   });
   group.add(markers);
 
-  return { group, bones, parts, joints: meta.joints };
+  return { group, bones, parts, boneMaterial, joints: meta.joints };
 }

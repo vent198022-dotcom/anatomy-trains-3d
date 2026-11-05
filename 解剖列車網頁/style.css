@@ -9,7 +9,7 @@
   --long: #79a8ff;
   --same: #b3ada8;
   --pain: #ff2e86;
-  --referred: #ff85b0;
+  --referred: #ff8524;
   --acu: #d8dee9;
   --selected: #c79bff;
 }
@@ -26,16 +26,35 @@ body {
 }
 #topbar { grid-area: top; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 8px 16px; border-bottom: 1px solid var(--line); }
 #topbar h1 { margin: 0 12px 0 0; font-size: 18px; font-weight: 600; }
-#lineBar, #viewBar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-#lineBar button { padding: 3px 9px; flex: none; }
-/* 列車線維持一列：畫面窄時左右捲動，不往下換行擠掉 3D 視窗 */
+#lineBar, #meridianBar, #viewBar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+#lineBar button, #meridianBar button { padding: 3px 9px; flex: none; }
+/* 列車線與經脈各佔一列，都維持單列：畫面窄時左右捲動，不往下換行擠掉 3D 視窗 */
 #topbar { flex-wrap: nowrap; }
-#lineBar { flex: 1; min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
-#topbar h1, #lineBar .label { flex: none; white-space: nowrap; }
+#bars { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+#lineBar, #meridianBar { flex: none; min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+#topbar h1, #lineBar .label, #meridianBar .label, #meridianBar .sep { flex: none; white-space: nowrap; }
+#meridianBar button { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; }
+#meridianBar button i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+#meridianBar .sep { width: 1px; height: 15px; background: var(--line); margin: 0 1px; }
 /* 視角鈕浮在 3D 視窗右上角 */
 #viewBar { position: absolute; top: 10px; right: 12px; z-index: 1; justify-content: flex-end; }
 #viewBar button { padding: 2px 10px; background: rgba(14, 17, 22, 0.72); }
-#left { grid-area: left; overflow-y: auto; }
+/* 左側面板：拆解固定在上面，肌肉清單自己吃掉剩下的高度並在框內捲動，整個面板就不會被撐長 */
+#left { grid-area: left; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+/* 收合左右側欄：那一欄寬度收成 0，3D 視窗自動變寬（按鈕在視窗兩邊） */
+body.hide-left { grid-template-columns: 0 minmax(0, 1fr) 330px; }
+body.hide-right { grid-template-columns: 240px minmax(0, 1fr) 0; }
+body.hide-left.hide-right { grid-template-columns: 0 minmax(0, 1fr) 0; }
+body.hide-left #left, body.hide-right #info { display: none; }
+.panel-toggle {
+  position: absolute; top: 50%; z-index: 2; width: 24px; height: 68px; margin-top: -34px; padding: 0;
+  border: 1px solid var(--accent); border-radius: 6px;
+  background: rgba(14, 17, 22, 0.92); color: var(--accent);
+  font-size: 13px; line-height: 1; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+}
+.panel-toggle:hover, .panel-toggle:focus-visible { background: var(--accent); color: #1b1600; }
+.panel-toggle.left { left: 0; border-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.panel-toggle.right { right: 0; border-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
 #viewport { grid-area: view; position: relative; min-height: 0; overflow: hidden; }
 #viewport canvas { display: block; outline: none; }
 #panPad { position: absolute; right: 12px; bottom: 12px; display: grid; grid-template-columns: repeat(3, 30px); grid-template-rows: repeat(3, 30px) auto; gap: 2px; }
@@ -66,9 +85,10 @@ button.active { background: var(--accent); border-color: var(--accent); color: #
 .label, .hint, .posture-note { color: var(--muted); }
 .hint, .posture-note { font-size: 13px; }
 
-.toggle { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.toggle { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+.layers { display: flex; flex-wrap: wrap; gap: 2px 12px; } /* 四個分層開關排成一列，不要把面板撐長 */
 .pain-modes { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin: 8px 0 6px; }
-.pain-modes .label { flex-basis: 100%; font-size: 13px; color: var(--pain); }
+.pain-modes .label { font-size: 13px; color: var(--pain); }
 .pain-modes button { padding: 1px 8px; font-size: 13px; }
 .slider { display: block; margin: 10px 0; color: var(--muted); }
 .slider input { width: 100%; }
@@ -77,23 +97,18 @@ button.active { background: var(--accent); border-color: var(--accent); color: #
 .hidden-list li { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 3px 0; font-size: 13px; }
 .hidden-list li button { flex: none; padding: 1px 8px; font-size: 12px; white-space: nowrap; }
 
-#meridianBar { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
-#meridianBar h3 { margin: 8px 0 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
-#meridianBar .row { display: flex; flex-wrap: wrap; gap: 4px; }
-#meridianBar .row button { display: inline-flex; align-items: center; gap: 5px; padding: 1px 7px; font-size: 13px; }
-#meridianBar .row button i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-#meridianBar [data-clear-meridians] { margin-top: 10px; padding: 1px 8px; font-size: 13px; }
-
-#muscleList { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+#muscleList { display: flex; flex-direction: column; flex: 1; min-height: 0; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); }
+.muscle-count { margin: 6px 0 2px; font-size: 12px; color: var(--muted); }
 #muscleList input[type='search'] { width: 100%; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
 .regions { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
 .regions button { padding: 1px 8px; font-size: 13px; }
-.muscle-rows { margin: 0; padding: 0; list-style: none; }
+/* 190 條肌肉不全部攤開：吃掉面板剩下的高度，在框裡自己捲動 */
+.muscle-rows { flex: 1; min-height: 110px; overflow-y: auto; margin: 0; padding: 0 6px 0 0; list-style: none; scrollbar-width: thin; }
 .muscle-rows li { display: flex; align-items: center; gap: 4px; padding: 2px 0; font-size: 13px; }
 .muscle-rows li span { flex: 1; }
 .muscle-rows li button { flex: none; padding: 0 6px; font-size: 12px; }
 
-#legend { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 6px; font-size: 13px; pointer-events: none; }
+#legend { position: absolute; left: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 4px 6px; max-width: calc(100% - 100px); font-size: 13px; pointer-events: none; }
 #legend span { padding: 2px 8px; border-radius: 6px; background: rgba(0, 0, 0, 0.45); }
 #legend .short { color: var(--short); }
 #legend .long { color: var(--long); }
@@ -114,7 +129,11 @@ dl { display: grid; grid-template-columns: 5.6em 1fr; gap: 4px 8px; margin: 0; }
 button.link { padding: 0 4px; border: 0; color: var(--acu); text-decoration: underline; }
 dt { color: var(--muted); }
 dd { margin: 0; }
-.zone-note { margin-left: 4px; font-size: 12px; color: var(--muted); }
+.zone-note { display: block; margin-top: 4px; font-size: 12px; color: var(--muted); }
+.depth { display: inline-block; min-width: 3.6em; margin-right: 6px; font-weight: 600; }
+.depth.surface { color: #ffea40; }
+.depth.mid { color: #ff8524; }
+.depth.deep { color: #ea2bb8; }
 .pain-hint { margin-top: 10px; padding: 6px 10px; border-radius: 6px; font-size: 13px; }
 .pain-hint.short { background: rgba(220, 42, 31, 0.15); }
 .pain-hint.long { background: rgba(36, 102, 224, 0.15); }
@@ -144,8 +163,13 @@ dd { margin: 0; }
   .panel, #info.panel { border: 0; border-top: 1px solid var(--line); }
   #postureBar .slider-groups { max-height: none; }
   .joints-toggle { margin-left: 0; }
-  #topbar, #lineBar { flex-wrap: wrap; } /* 手機本來就要捲動頁面，列車線換行比左右捲動好找 */
-  #lineBar { flex-basis: 100%; overflow-x: visible; }
+  #topbar, #lineBar, #meridianBar { flex-wrap: wrap; } /* 手機本來就要捲動頁面，換行比左右捲動好找 */
+  #bars { flex-basis: 100%; }
+  #lineBar, #meridianBar { overflow-x: visible; }
+  #left, #muscleList { display: block; }
+  body.hide-left, body.hide-right, body.hide-left.hide-right { grid-template-columns: minmax(0, 1fr); }
+  .panel-toggle { top: 12px; margin-top: 0; }
+  .muscle-rows { min-height: 0; overflow-y: visible; }
   .slider-group.wide { grid-column: auto; grid-template-columns: minmax(0, 1fr); }
   #panPad { bottom: 48px; } /* 窄畫面的圖例佔滿下緣，平移鍵移到它上面 */
   #panPad small { display: none; }

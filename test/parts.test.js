@@ -9,7 +9,7 @@ test('部件 id 不重複，層、分區、附著群組都合法', () => {
   assert.ok(PARTS.length >= 140, `部件數 ${PARTS.length}`);
   for (const p of PARTS) {
     assert.ok(['superficial', 'middle', 'deep'].includes(p.layer), p.id);
-    assert.ok(['headNeck', 'trunk', 'upperLimb', 'lowerLimb'].includes(p.region), p.id);
+    assert.ok(['face', 'headNeck', 'trunk', 'upperLimb', 'lowerLimb'].includes(p.region), p.id);
     assert.ok(p.attach.length >= 2, p.id);
     for (const a of p.attach) assert.ok(a.bones.length > 0, p.id);
     for (const t of p.tp) assert.ok(t > 0 && t < 1, `${p.id} 痠痛點位置 ${t}`);

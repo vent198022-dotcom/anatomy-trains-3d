@@ -84,7 +84,7 @@ for (const p of PARTS) {
     const meshName = p.zNames?.[side] ?? (p.unsided ? p.zName : `${p.zName}.${side}`);
     const mesh = muscleMeshes.get(meshName);
     if (!mesh) throw new Error(`找不到肌肉 ${meshName}`);
-    const geo = await simplify(worldGeometry(mesh), PART_RATIO);
+    const geo = await simplify(worldGeometry(mesh), p.ratio ?? PART_RATIO);
     const groups = p.attach.map(at => at.bones.map(b => (p.unsided ? b : withSide(b, side))));
     const regions = groups.map(names => {
       try {

@@ -92,5 +92,5 @@ test('關節位置合理', () => {
 test('三角面與檔案大小在預算內', () => {
   const tris = [...meta.bones, ...meta.parts].reduce((n, e) => n + e.iCount / 3, 0);
   assert.ok(tris <= 800000, `三角面 ${tris}`);
-  assert.ok(statSync('data/processed/meshes.bin').size <= 7.5 * 1048576); // base64 後約 10 MB
+  assert.ok(statSync('data/processed/meshes.bin').size <= 8 * 1048576); // base64 後約 10.6 MB
 });

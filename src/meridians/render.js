@@ -129,6 +129,18 @@ export function createMeridians() {
     livePaths() {
       return tracks.map(t => ({ meridian: t.meridian, side: t.side, path: t.stale ? null : t.live }));
     },
+    // 不管有沒有顯示，都把穴位算到目前姿勢（找痠痛點附近有哪些穴位用）
+    allAcupoints(mats) {
+      const out = [];
+      for (const t of tracks) {
+        for (const a of t.acu) {
+          point.fromArray(t.nodes[a.index].pos);
+          if (mats) point.applyMatrix4(mats.get(a.seg) ?? matrix.identity());
+          out.push({ meridian: t.meridian, side: t.side, point: a, pos: point.toArray() });
+        }
+      }
+      return out;
+    },
     // 不管有沒有顯示，都把節點算到目前姿勢（找鄰近經脈用）
     allPaths(mats) {
       return tracks.map(t => {

@@ -2,9 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { ZONES, REFERRED, zoneAt, referredZones, hasReferredZones, isMidlineZone } from '../src/pain/zones.js';
-import { ZONE_COLOR, ZONE_OPACITY } from '../src/pain/referredRender.js';
-import { MARKER_COLORS } from '../src/app/controller.js';
+import { ZONES, REFERRED, DEPTHS, DEPTH_TEXT, zoneAt, referredZones, hasReferredZones, isMidlineZone } from '../src/pain/zones.js';
+import { ZONE_COLOR, ZONE_COLORS, ZONE_OPACITY } from '../src/pain/referredRender.js';
+import { restBounds, falloff, mayTouch, zoneWeights, dominantZone, PAINT_STRENGTH, CORE, REACH } from '../src/pain/paint.js';
+import { MARKER_COLORS, LAYER_SCALE } from '../src/app/controller.js';
 import { MERIDIANS } from '../src/meridians/meridians.js';
 import { PALETTE } from '../src/muscles/colors.js';
 import { SEGMENT_KEYS } from '../src/rig/segments.js';
@@ -94,6 +95,86 @@ test('轉移痛範圍放在合理的位置（y 向上、z 向前）', () => {
   assert.equal(by('flexorPollicisLongus', 'l', 'thumbTip').seg, 'thumbDist.l'); // 拇指尖綁在拇指遠節
 });
 
+test('每個區域都標了痛的深度，三種深度都用得到', () => {
+  for (const [id, z] of Object.entries(ZONES)) {
+    assert.ok(DEPTHS.includes(z.depth), `${id} 的深度「${z.depth}」不合法`);
+    assert.ok(ZONE_COLORS[z.depth], `深度 ${z.depth} 沒有顏色`);
+    assert.ok(DEPTH_TEXT[z.depth], `深度 ${z.depth} 沒有中文`);
+  }
+  for (const d of DEPTHS) assert.ok(Object.values(ZONES).some(z => z.depth === d), `沒有任何區域是 ${d}`);
+  // 名稱寫「深處」的一定算深層；手指、腳趾、手背這種摸得到的一定算表淺
+  for (const [id, z] of Object.entries(ZONES)) {
+    if (z.label.includes('深處')) assert.equal(z.depth, 'deep', `${id}（${z.label}）應該是深層`);
+  }
+  for (const id of ['handDorsum', 'footDorsum', 'fingerTips', 'thumb', 'toesDorsal']) assert.equal(ZONES[id].depth, 'surface', id);
+  assert.equal(zoneAt('shoulderDeep', 'r').depth, 'deep');
+  assert.ok(referredZones('infraspinatus', 'l').every(z => z.depth));
+});
+
+test('三種深度的顏色彼此分得開，也不會和痠痛點混在一起', () => {
+  const list = DEPTHS.map(d => ZONE_COLORS[d]);
+  for (let i = 0; i < list.length; i++) {
+    for (let j = i + 1; j < list.length; j++) assert.ok(dist(list[i], list[j]) >= 0.25, `${DEPTHS[i]} 與 ${DEPTHS[j]} 的顏色太接近`);
+    assert.ok(dist(list[i], MARKER_COLORS.spot) >= 0.25, `${DEPTHS[i]} 和痠痛點的顏色太接近`);
+  }
+});
+
+test('染色權重：中心最濃、邊緣淡出、超出範圍為 0', () => {
+  assert.equal(falloff(0, 3), 1);
+  assert.equal(falloff(3 * REACH, 3), 0);
+  assert.equal(falloff(99, 3), 0);
+  assert.ok(falloff(1.2, 3) > falloff(2.4, 3)); // 愈遠愈淡
+  assert.ok(falloff(3 * CORE * REACH * 0.9, 3) === 1); // 核心範圍內是實心
+  assert.ok(PAINT_STRENGTH > 0 && PAINT_STRENGTH <= 1);
+});
+
+test('restBounds：外接球包得住所有頂點', () => {
+  const rest = new Float32Array([0, 0, 0, 10, 0, 0, 0, 6, 0, -4, 0, 2]);
+  const b = restBounds(rest);
+  for (let v = 0; v < rest.length / 3; v++) {
+    const d = Math.hypot(rest[v * 3] - b.center[0], rest[v * 3 + 1] - b.center[1], rest[v * 3 + 2] - b.center[2]);
+    assert.ok(d <= b.radius + 1e-6, `第 ${v} 個頂點跑到外接球外面`);
+  }
+  assert.equal(restBounds(new Float32Array(0)).radius, 0);
+});
+
+test('zoneWeights：碰得到的頂點才有權重，完全碰不到時回傳 null', () => {
+  const rest = new Float32Array([0, 0, 0, 1, 0, 0, 40, 0, 0]);
+  const bounds = restBounds(rest);
+  const near = [{ id: 'a', label: 'a', seg: 'pelvis', pos: [0, 0, 0], radius: 3, depth: 'mid' }];
+  const got = zoneWeights(rest, bounds, near);
+  assert.equal(got.weights[0], 1); // 正中心
+  assert.ok(got.weights[1] > 0 && got.weights[1] <= 1);
+  assert.equal(got.weights[2], 0); // 40 公分外
+  assert.deepEqual([...got.hit], [0]);
+
+  const far = [{ id: 'b', label: 'b', seg: 'pelvis', pos: [0, 500, 0], radius: 3, depth: 'mid' }];
+  assert.equal(zoneWeights(rest, bounds, far), null);
+  assert.equal(mayTouch(bounds, far), false);
+  assert.equal(mayTouch(bounds, near), true);
+});
+
+test('dominantZone：取離部件中心最近的那個區域，決定染哪一種深度的顏色', () => {
+  const zones = [
+    { id: 'far', label: 'far', seg: 'pelvis', pos: [0, 30, 0], radius: 4, depth: 'surface' },
+    { id: 'near', label: 'near', seg: 'pelvis', pos: [0, 1, 0], radius: 4, depth: 'deep' },
+  ];
+  const bounds = { center: [0, 0, 0], radius: 2 };
+  assert.equal(dominantZone(bounds, zones, new Set([0, 1])).id, 'near');
+  assert.equal(dominantZone(bounds, zones, new Set()), null);
+});
+
+test('痠痛點的大小看得出肌肉的深淺：淺層最大、深層最小', () => {
+  assert.ok(LAYER_SCALE.superficial > LAYER_SCALE.middle);
+  assert.ok(LAYER_SCALE.middle > LAYER_SCALE.deep);
+  // 相鄰兩層至少差兩成，肉眼才分得出來
+  assert.ok(LAYER_SCALE.middle / LAYER_SCALE.superficial < 0.8);
+  assert.ok(LAYER_SCALE.deep / LAYER_SCALE.middle < 0.8);
+  const layers = new Set(PARTS.map(p => p.layer));
+  for (const l of layers) assert.ok(LAYER_SCALE[l] > 0, `層次 ${l} 沒有對應的大小`);
+  assert.equal(Object.keys(LAYER_SCALE).length, layers.size);
+});
+
 test('痠痛點、轉移痛與經脈的顏色分得開', () => {
   const MIN = 0.25;
   for (const m of MERIDIANS) {
@@ -117,4 +198,5 @@ test('痠痛點、轉移痛與經脈的顏色分得開', () => {
   // 轉移痛的罩子是半透明的一團，和痠痛點同色系但不會蓋掉它
   assert.ok(ZONE_OPACITY > 0 && ZONE_OPACITY < 0.5);
   assert.ok(dist(ZONE_COLOR, MARKER_COLORS.spot) > 0.15);
+  assert.deepEqual(ZONE_COLOR, ZONE_COLORS.mid);
 });

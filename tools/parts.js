@@ -45,6 +45,14 @@ const LEG = ['Tibia.{s}', 'Fibula.{s}'];
 const OCCIPUT = ['Occipital bone'];
 const MASTOID = ['Temporal bone.{s}'];
 const MANDIBLE = ['Mandible'];
+const FRONTAL_B = ['Frontal bone'];
+const PARIETAL_B = ['Parietal bone.{s}'];
+const ZYGOMATIC = ['Zygomatic bone.{s}'];
+const MAXILLA = ['Maxilla.{s}'];
+const NASAL_B = ['Nasal bone.{s}'];
+const SPHENOID = ['Sphenoid bone'];
+const LACRIMAL = ['Lacrimal bone.{s}'];
+const TEMPORAL_FOSSA = [...PARIETAL_B, ...MASTOID, ...SPHENOID, ...FRONTAL_B]; // 顳窩：顳肌的起點
 const HYOID = ['Hyoid bone'];
 const CALCANEUS = ['Calcaneus.{s}'];
 const TOES = ['Proximal phalanx', 'Middle phalanx', 'Distal phalanx'].flatMap(p => ['second', 'third', 'fourth', 'fifth'].map(f => `${p} of ${f} finger of foot.{s}`));
@@ -67,6 +75,7 @@ function part(id, zName, layer, region, attach, opts = {}) {
     frontBundle: Boolean(opts.frontBundle),
     measure: opts.measure ?? true, // 筋膜、肌腱不計算長度
     maxGap: opts.maxGap ?? 2, // 附著區與骨頭的最大容許距離（公分）
+    ratio: opts.ratio ?? null, // 簡化後保留的三角面比例（不寫就用 PART_RATIO）；臉部的小肌肉留少一點
     tp: opts.tp ?? [0.5],
     // 只用來決定變形的骨頭（不算附著）：腹壁各層用同一組，同一個位置的頂點跟著同樣的骨段走，彎腰時才不會互相穿出
     skinWith: opts.skinWith ?? [],
@@ -77,6 +86,9 @@ function part(id, zName, layer, region, attach, opts = {}) {
   };
 }
 const fascia = { measure: false };
+// 臉部：頭顱是一整個骨段，沒有顳顎關節與表情動作，長度不會變，所以不計算
+// 臉部的肌肉又小又多（嘴唇、眼瞼都是薄片），三角面留得比其他部位少
+const face = { measure: false, maxGap: 3, ratio: 0.2 };
 // 腹壁（腹直肌、白線、腹內外斜肌、腹橫肌）共用的變形骨頭：骨盆、五節腰椎、下肋與肋軟骨、胸骨
 const ABDOMINAL_WALL = both(['Hip bone.{s}', ...range(1, 5).map(L), ...ribs(5, 12), ...range(5, 10).map(cartilage), 'Xiphoid process', 'Body of sternum']);
 const wall = { skinWith: ABDOMINAL_WALL };
@@ -195,6 +207,35 @@ export const PARTS = [
   part('occipitalis', 'Occipitalis muscle', 'superficial', 'headNeck', [OCCIPUT, ['Parietal bone.{s}']], { maxGap: 3 }),
   part('frontalis', 'Frontalis muscle', 'superficial', 'headNeck', [['Parietal bone.{s}'], ['Frontal bone']], { maxGap: 3 }),
   part('temporoparietalis', 'Temporoparietalis muscle', 'superficial', 'headNeck', [MASTOID, ['Parietal bone.{s}']], { maxGap: 3 }),
+
+  // ── 臉部：咀嚼肌與表情肌 ──
+  // 本模型把整個頭顱（含下頷、舌骨）當成一個骨段，沒有顳顎關節，也不做表情，
+  // 所以這些肌肉不隨姿勢改變長度：一律 measure: false，只用來定位、看說明與痠痛點。
+  part('temporalis', 'Temporalis muscle', 'middle', 'face', [TEMPORAL_FOSSA, MANDIBLE], { ...face, maxGap: 4, tp: [0.25, 0.5, 0.75] }),
+  part('masseterSup', 'Superficial part of masseter', 'superficial', 'face', [ZYGOMATIC, MANDIBLE], { ...face, tp: [0.35, 0.7] }),
+  part('masseterDeep', 'Deep part of masseter', 'middle', 'face', [[...ZYGOMATIC, ...MASTOID], MANDIBLE], { ...face, tp: [0.55] }),
+  part('pterygoidMed', 'Medial pterygoid muscle', 'deep', 'face', [[...SPHENOID, 'Palatine bone.{s}'], MANDIBLE], { ...face, maxGap: 4, tp: [0.5] }),
+  part('pterygoidLatSup', 'Superior head of lateral pterygoid muscle', 'deep', 'face', [SPHENOID, MANDIBLE], { ...face, maxGap: 4, tp: [] }),
+  part('pterygoidLatInf', 'Inferior head of lateral pterygoid muscle', 'deep', 'face', [SPHENOID, MANDIBLE], { ...face, maxGap: 4, tp: [0.5] }),
+  part('temporalFascia', 'Superficial layer of temporal fascia', 'superficial', 'face', [[...PARIETAL_B, ...FRONTAL_B], ZYGOMATIC], { ...face, maxGap: 4, tp: [] }),
+  part('masseterFascia', 'Masseteric fascia', 'superficial', 'face', [ZYGOMATIC, MANDIBLE], { ...face, tp: [] }),
+  part('orbicularisOculiOrb', 'Orbital part of orbicularis oculi', 'superficial', 'face', [[...MAXILLA, ...LACRIMAL], [...ZYGOMATIC, ...FRONTAL_B]], { ...face, tp: [0.5] }),
+  part('orbicularisOculiPalp', 'Palpebral part of orbicularis oculi', 'superficial', 'face', [[...LACRIMAL, ...MAXILLA], ZYGOMATIC], { ...face, tp: [] }),
+  part('levatorPalpebrae', 'Levator palpebrae superioris', 'deep', 'face', [SPHENOID, FRONTAL_B], { ...face, maxGap: 4, tp: [] }),
+  part('corrugatorSupercilii', 'Corrugator supercilii', 'middle', 'face', [NASAL_B, FRONTAL_B], { ...face, tp: [0.6] }),
+  part('procerus', 'Procerus muscle', 'superficial', 'face', [NASAL_B, FRONTAL_B], { ...face, tp: [] }),
+  part('nasalis', 'Nasalis muscle', 'superficial', 'face', [MAXILLA, NASAL_B], { ...face, tp: [] }),
+  part('depressorSeptiNasi', 'Depressor septi nasi', 'deep', 'face', [MAXILLA, NASAL_B], { ...face, tp: [] }),
+  part('levatorNasolabialis', 'Levator nasolabialis', 'superficial', 'face', [NASAL_B, MAXILLA], { ...face, tp: [] }),
+  part('levatorLabiiSuperioris', 'Levator labii superioris', 'superficial', 'face', [ZYGOMATIC, MAXILLA], { ...face, tp: [0.5] }),
+  part('zygomaticusMajor', 'Zygomaticus major muscle', 'superficial', 'face', [ZYGOMATIC, MANDIBLE], { ...face, maxGap: 4, tp: [0.6] }),
+  part('zygomaticusMinor', 'Zygomaticus minor muscle', 'superficial', 'face', [ZYGOMATIC, MAXILLA], { ...face, tp: [] }),
+  part('levatorAnguliOris', 'Levator anguli oris', 'middle', 'face', [MAXILLA, MANDIBLE], { ...face, maxGap: 4, tp: [] }),
+  part('risorius', 'Risorius muscle', 'superficial', 'face', [MASTOID, MANDIBLE], { ...face, maxGap: 4, tp: [] }),
+  part('depressorAnguliOris', 'Depressor anguli oris', 'superficial', 'face', [MANDIBLE, MAXILLA], { ...face, maxGap: 4, tp: [] }),
+  part('depressorLabiiInferioris', 'Depressor labii inferioris', 'middle', 'face', [MANDIBLE, MAXILLA], { ...face, maxGap: 4, tp: [] }),
+  part('mentalis', 'Mentalis muscle', 'deep', 'face', [MAXILLA, MANDIBLE], { ...face, maxGap: 4, tp: [0.6] }),
+  part('orbicularisOris', 'Orbicularis oris muscle', 'superficial', 'face', [MAXILLA, MANDIBLE], { ...face, maxGap: 4, tp: [0.5] }),
 
   // ── 2A：背部深層（豎脊肌、橫突棘肌群等） ──
   part('spleniusCapitis', 'Splenius capitis muscle', 'middle', 'headNeck', [[C(7), ...Ts(1, 3)], [...MASTOID, ...OCCIPUT]], { tp: [0.6] }),
