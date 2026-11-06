@@ -20,6 +20,9 @@ export function createDisplayState() {
     painMode: 'off', // 痠痛點：'off' 關閉、'posture' 只標鎖短／鎖長、'all' 全身都標
     selectedPain: null, // 點到的痠痛點 { key, index }
     overlay: false, // 穿透顯示：經脈與痠痛點不被肌肉擋住
+    lookupMode: false, // 「找痛源」：點模型上會痛的地方，反查可能的來源肌肉
+    lookup: null, // 反查結果 { position, sources }
+    postureZones: false, // 把目前姿勢所有鎖短／鎖長肌肉的轉移痛疊起來標示
   };
 }
 
@@ -59,6 +62,7 @@ export function resetDisplay(st) {
   st.explode = 0;
   st.selectedKey = null;
   st.selectedPain = null;
+  st.lookup = null;
 }
 
 // 痠痛點要不要顯示、用哪種顏色：null（不顯示）、'spot'（全身模式下的一般痠痛點）、

@@ -38,6 +38,11 @@ canvas.addEventListener('pointerdown', e => {
 });
 canvas.addEventListener('pointerup', e => {
   if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 5) {
+    if (ctrl.state.lookupMode) {
+      ctrl.lookupAt(ctrl.pointAt(e.clientX, e.clientY)); // 找痛源：點到哪就查哪
+      down = null;
+      return;
+    }
     const got = ctrl.pickAt(e.clientX, e.clientY);
     if (got.kind === 'acupoint') ctrl.selectAcupoint(got.hit);
     else if (got.kind === 'pain') ctrl.selectPain(got.pain);

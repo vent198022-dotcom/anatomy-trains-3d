@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDisplayState, partDisplay, partOffset, resetDisplay, restoreParts, painMarkerState, EXPLODE_MAX, PULL_DISTANCE, LAYER_PUSH, GHOST_OPACITY } from '../src/app/display.js';
+import { painHint, PAIN_MODES } from '../src/ui/dissectPanel.js';
 
 const part = { key: 'pecMinor.r', id: 'pecMinor', layer: 'middle', measure: true, centroid: [-6, 130, 8] };
 
@@ -122,4 +123,11 @@ test('痠痛點：全身模式下，看得到的肌肉都標出來', () => {
   assert.equal(painMarkerState(part, st, true, -0.14), 'short'); // 姿勢改變時仍用鎖短紅
   st.hidden.add('pecMinor.r');
   assert.equal(painMarkerState(part, st, false, 0), null);
+});
+
+test('痠痛點面板的提示依模式與姿勢換句話說', () => {
+  assert.match(painHint('off', false, 0), /姿勢造成的/);
+  assert.match(painHint('posture', false, 0), /中立姿勢/); // 中立時標 0 個，要說清楚為什麼
+  assert.match(painHint('posture', true, 42), /42/);
+  assert.match(painHint('all', false, 322), /322/);
 });

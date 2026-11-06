@@ -4,7 +4,7 @@ import { computePose } from '../rig/rig.js';
 import { NEUTRAL, isNeutral } from '../rig/presets.js';
 import { deformInto, deformChain } from '../muscles/deform.js';
 import { lengthDelta } from '../muscles/length.js';
-import { partColor } from '../muscles/colors.js';
+import { partColor, lengthState } from '../muscles/colors.js';
 import { createDisplayState, partDisplay, partOffset, resetDisplay, restoreParts, painMarkerState } from './display.js';
 import { linesPartIds } from '../trains/lines.js';
 import { createNet } from '../trains/net.js';
@@ -13,6 +13,7 @@ import { densify, distanceToPath } from '../meridians/path.js';
 import { referredZones } from '../pain/zones.js';
 import { createReferredZones, ZONE_COLORS } from '../pain/referredRender.js';
 import { restBounds, zoneWeights, dominantZone } from '../pain/paint.js';
+import { allZones, sourcesAt } from '../pain/lookup.js';
 
 // 痠痛點的顏色：刻意和經脈穴位（各自的經脈色，見 meridians.js）分開——痠痛點用洋紅、純紅、純藍、亮黃，
 // 而且是比較大的八面體；穴位是比較小的球，色系偏柔和，兩者一起顯示時不會混淆
@@ -23,6 +24,7 @@ const MARKER_LIFT = 0.5; // 標記沿法向量浮出肌肉表面的距離（公�
 const SELECTED_EMISSIVE = [0.12, 0.05, 0.2]; // 選取的肌肉稍微自發光，在暗處也看得到紫色
 const NEARBY_MERIDIAN = 7; // 痠痛點與經脈相距幾公分以內算「鄰近」（深層肌肉離體表的經脈比較遠，所以放寬一些）
 const NEARBY_ACUPOINT = 6; // 痠痛點與穴位相距幾公分以內算「附近的穴位」
+const POSTURE_LIMIT = 10; // 姿勢總結列出幾條肌肉
 
 export function createController(viewer, model) {
   const state = createDisplayState();
@@ -72,6 +74,7 @@ export function createController(viewer, model) {
     }
     pathCache = null;
     acupointCache = null;
+    zoneCache = null;
     clearTimeout(finishTimer);
     finishTimer = setTimeout(finishPose, 120);
     applyColors();
@@ -166,6 +169,21 @@ export function createController(viewer, model) {
     emit();
   }
 
+  // 所有轉移痛區域換算到目前姿勢；反查痛源用，姿勢改變才重算
+  const restZones = allZones();
+  let zoneCache = null;
+  function posedZones() {
+    if (zoneCache) return zoneCache;
+    const v = new THREE.Vector3();
+    const identity = new THREE.Matrix4();
+    zoneCache = restZones.map(z => {
+      v.fromArray(z.pos);
+      if (mats) v.applyMatrix4(mats.get(z.seg) ?? identity);
+      return { ...z, pos: v.toArray() };
+    });
+    return zoneCache;
+  }
+
   // 某個位置附近有哪些穴位（距離近的排前面）：中醫的「近取」就從這些穴位找起
   let acupointCache = null;
   function nearbyAcupoints(position, limit = 4) {
@@ -206,9 +224,7 @@ export function createController(viewer, model) {
 
   function applyReferred() {
     clearPaint();
-    const sel = state.selectedPain;
-    const part = sel && byKey.get(sel.key);
-    const zones = part ? referredZones(part.info.id, part.info.side) : [];
+    const zones = referredTargets();
     if (!zones.length) {
       referred.show([], mats);
       return;
@@ -240,6 +256,51 @@ export function createController(viewer, model) {
     }
     // 關節內、體腔內，或那一層被關掉而染不到的區域，仍然用半透明的球標出來，資訊才不會不見
     referred.show(zones.filter((_, i) => !painted.has(i)), mats);
+  }
+
+  // 現在要把哪些區域染出來：選到的痠痛點優先，其次是「這個姿勢的痛區」
+  function referredTargets() {
+    const sel = state.selectedPain;
+    const part = sel && byKey.get(sel.key);
+    if (part) return referredZones(part.info.id, part.info.side);
+    // 找痛源：把點到的那幾塊區域染出來，確認查的是哪裡
+    if (state.lookup) {
+      const seen = new Set();
+      return state.lookup.sources.map(x => x.zone).filter(z => !seen.has(z.id + z.side) && seen.add(z.id + z.side));
+    }
+    if (state.postureZones && poseActive()) return posturePainZones();
+    return [];
+  }
+
+  // 這個姿勢最吃虧的肌肉：只看算長度的部件，依 |Δ| 排序，左右合併成一列
+  function postureMuscles(limit = POSTURE_LIMIT) {
+    if (!poseActive()) return [];
+    const rows = new Map();
+    for (const p of model.parts) {
+      if (!p.info.measure) continue;
+      const lock = lengthState(p.delta);
+      if (lock === 'same') continue;
+      const row = rows.get(p.info.id);
+      if (!row || Math.abs(row.delta) < Math.abs(p.delta)) rows.set(p.info.id, { id: p.info.id, key: p.info.key, side: p.info.side, delta: p.delta, state: lock });
+    }
+    return [...rows.values()].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, limit);
+  }
+
+  // 把上面那些肌肉的轉移痛區域疊起來（同一塊只留一份）
+  function posturePainZones() {
+    const seen = new Set();
+    const out = [];
+    for (const row of postureMuscles()) {
+      const part = byKey.get(row.key);
+      if (!part) continue;
+      for (const z of referredZones(part.info.id, part.info.side)) {
+        const key = `${z.id}.${z.seg}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(z);
+      }
+    }
+    return out;
   }
 
   // 痠痛點目前的世界座標；直接從肌肉網格算，不必等標記在下一幀才就位
@@ -292,6 +353,32 @@ export function createController(viewer, model) {
     },
     nearbyMeridians,
     nearbyAcupoints,
+    postureMuscles,
+    // 在模型上點一個會痛的位置，反查轉移痛會到那裡的肌肉
+    lookupAt(position) {
+      const sources = position ? sourcesAt(position, posedZones()) : [];
+      state.lookup = position ? { position, sources } : null;
+      state.selectedKey = null;
+      state.selectedPain = null;
+      meridians.select(null);
+      applyDisplay();
+      applyReferred();
+      emit();
+    },
+    setLookupMode(on) {
+      state.lookupMode = on;
+      if (!on) state.lookup = null;
+      emit();
+    },
+    setPostureZones(on) {
+      state.postureZones = on;
+      applyReferred();
+      emit();
+    },
+    // 目前標出來的痠痛點個數（面板用來回報「標了幾個」）
+    visiblePainCount() {
+      return model.parts.reduce((n, p) => n + p.tps.filter(t => t.marker.visible).length, 0);
+    },
     painPosition,
     setParams(next) {
       params = { ...params, ...next };

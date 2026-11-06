@@ -5,6 +5,7 @@ import { deltaText, lengthState, STATE_TEXT } from '../muscles/colors.js';
 import { LINES } from '../trains/lines.js';
 import { meridianById } from '../meridians/meridians.js';
 import { DEPTHS, DEPTH_TEXT } from '../pain/zones.js';
+import { STATE_TEXT as LOCK_TEXT } from '../muscles/colors.js';
 
 const SIDE_TEXT = { l: '左側', r: '右側', m: '中線' };
 const LAYER_TEXT = { superficial: '淺層', middle: '中層（關掉淺層才看得到）', deep: '深層（關掉淺層、中層才看得到）' };
@@ -14,6 +15,7 @@ export function initInfoCard(el, ctrl, content) {
   function render() {
     const acu = ctrl.selectedAcupoint;
     if (acu) return void (el.innerHTML = acupointCard(acu, content));
+    if (ctrl.state.lookup) return void (el.innerHTML = lookupCard(ctrl, content));
     if (ctrl.state.selectedPain) return void (el.innerHTML = painCard(ctrl, content));
     if (ctrl.state.selectedKey) return void (el.innerHTML = muscleCard(ctrl, content));
     el.innerHTML = overviewCard(ctrl, content);
@@ -24,6 +26,7 @@ export function initInfoCard(el, ctrl, content) {
     if (!btn) return;
     if (btn.dataset.act && ctrl.state.selectedKey) ctrl.toggle(btn.dataset.act, ctrl.state.selectedKey);
     else if (btn.dataset.muscle) ctrl.focus(btn.dataset.muscle);
+    else if ('postureZones' in btn.dataset) ctrl.setPostureZones(!ctrl.state.postureZones);
     else if (btn.dataset.meridian) ctrl.toggleMeridian(btn.dataset.meridian);
   });
   ctrl.onChange(render);
@@ -77,6 +80,34 @@ function tcmView(content, near, acupoints) {
       <p>${t.pattern}</p>
       <p class="notes">${t.note}</p>
     </details>`;
+}
+
+// 反查：點了會痛的位置之後，列出轉移痛會到那裡的肌肉
+function lookupCard(ctrl, content) {
+  const { sources } = ctrl.state.lookup;
+  if (!sources.length) {
+    return `
+      <h2>找痛源</h2>
+      <p class="hint">這個位置沒有對應到收錄的轉移痛區域。試試點在肌肉比較多的地方，或把視角轉到真正會痛的那一面再點一次。</p>`;
+  }
+  const rows = sources
+    .map(s => {
+      const c = content.muscles[s.id];
+      const part = ctrl.partByKey(`${s.id}.${s.side}`) ?? ctrl.partByKey(`${s.id}.m`);
+      if (!part || !c) return '';
+      return `
+        <li>
+          <button type="button" class="link" data-muscle="${part.info.key}">${c.name}<span class="side">${SIDE_TEXT[part.info.side]}</span></button>
+          <span class="zone"><b class="depth ${s.zone.depth}">${DEPTH_TEXT[s.zone.depth]}</b>${s.zone.label}</span>
+          <p>${c.painPoints === '—' ? c.referredPain : c.painPoints}</p>
+        </li>`;
+    })
+    .join('');
+  return `
+    <h2>找痛源<span class="side">${sources.length} 條可能的肌肉</span></h2>
+    <p class="hint">以下肌肉的轉移痛會到你點的那個位置，愈上面代表那一點愈落在它的轉移痛範圍中心。點肌肉名稱可以跳過去看完整說明與痠痛點。</p>
+    <ol class="lookup-list">${rows}</ol>
+    <p class="hint">同一個地方痛可能有好幾個來源，要靠按壓能不能重現你平常的痛來分辨。這是整理出來的常見關聯，不能取代專業評估。</p>`;
 }
 
 function painCard(ctrl, content) {
@@ -163,11 +194,32 @@ function muscleCard(ctrl, content) {
     </div>`;
 }
 
+// 套用姿勢之後：這個姿勢最吃虧的肌肉，以及它們合起來會痛在哪
+function postureSummary(ctrl, content) {
+  const rows = ctrl.postureMuscles();
+  if (!rows.length) return '';
+  const items = rows
+    .map(r => {
+      const c = content.muscles[r.id];
+      return `<li class="${r.state}"><button type="button" class="link" data-muscle="${r.key}">${c.name}</button><span>${deltaText(r.delta)}　${LOCK_TEXT[r.state]}</span></li>`;
+    })
+    .join('');
+  const on = ctrl.state.postureZones;
+  return `
+    <h2>這個姿勢最吃虧的肌肉</h2>
+    <p class="hint">依長度變化排序（紅＝鎖短、藍＝鎖長）。點名稱跳到那條肌肉。</p>
+    <ol class="posture-list">${items}</ol>
+    <div class="actions"><button type="button" data-posture-zones class="${on ? 'active' : ''}">${on ? '✓ 已標出這個姿勢的痛區' : '標出這個姿勢的痛區'}</button></div>
+    <p class="hint">「痛區」把上面這些肌肉的轉移痛疊起來染在模型上，就是這個姿勢最容易感覺到痠痛的地方。</p>`;
+}
+
 function overviewCard(ctrl, content) {
   const lines = ctrl.activeLines.map(id => LINES.find(l => l.id === id));
   const meridians = ctrl.activeMeridians.map(meridianById).filter(Boolean);
-  if (!lines.length && !meridians.length) return '<p class="hint">點選肌肉、痠痛點或穴位查看說明；也可以從左側清單選取。</p>';
+  const posture = postureSummary(ctrl, content);
+  if (!lines.length && !meridians.length) return posture || '<p class="hint">點選肌肉、痠痛點或穴位查看說明；也可以從左側清單選取。</p>';
   return `
+    ${posture}
     ${lines.map(line => `<h2>${line.name}</h2><p>${content.lines[line.name]}</p>`).join('')}
     ${meridians.map(m => `<h2>${m.name}<span class="side">${m.code}</span></h2><p>${content.meridians[m.id]}</p>`).join('')}
     <p class="hint">點選線上的肌肉或經脈上的穴位查看說明；再點一次可取消。</p>`;

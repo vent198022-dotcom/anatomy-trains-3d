@@ -10,11 +10,20 @@ const TOGGLES = [
   ['bones', '骨骼'],
 ];
 
+// 'posture' 是「姿勢造成的痠痛點」：下方選了姿勢之後，被它鎖短（紅）、鎖長（藍）的肌肉才會標出來
 export const PAIN_MODES = [
   ['off', '不顯示'],
-  ['posture', '只標鎖短／鎖長'],
-  ['all', '全身痠痛點'],
+  ['posture', '姿勢造成的'],
+  ['all', '全身'],
 ];
+
+// 面板下方的提示：依目前模式與有沒有套用姿勢換句話說，免得按了沒反應不知道為什麼
+export function painHint(mode, poseActive, count) {
+  if (mode === 'off') return '選「姿勢造成的」，下方換姿勢時就會標出被它鎖短、鎖長的肌肉痠痛點。';
+  if (mode === 'all') return `全身 ${count} 個痠痛點。菱形愈大代表肌肉愈淺層；點它看可能的問題與轉移痛範圍。`;
+  if (!poseActive) return '目前是中立姿勢，所以沒有痠痛點。到下方選一個姿勢（圓肩、頭前傾、滑手機…），被它鎖短、鎖長的肌肉就會標出來。';
+  return `這個姿勢標出 ${count} 個痠痛點：紅＝鎖短、藍＝鎖長。點它看可能的問題與轉移痛範圍。`;
+}
 
 export function initDissectPanel(el, ctrl, content) {
   el.innerHTML = `
@@ -24,11 +33,14 @@ export function initDissectPanel(el, ctrl, content) {
       <span class="label">痠痛點</span>
       ${PAIN_MODES.map(([k, label]) => `<button type="button" data-pain="${k}">${label}</button>`).join('')}
     </div>
+    <p class="hint pain-hint-line"></p>
+    <button type="button" class="lookup-toggle" data-lookup></button>
+    <p class="hint lookup-hint-line"></p>
     <label class="toggle" title="經脈與痠痛點不會被肌肉擋住，背面的也看得到"><input type="checkbox" data-overlay>穿透顯示</label>
     <label class="slider">爆炸圖<input type="range" min="0" max="1" step="0.01" value="0" data-explode></label>
     <button type="button" data-reset>復原</button>
     <div class="hidden-list"></div>
-    <p class="hint">關掉淺層看中層；點選肌肉可隱藏、半透明或拉出。「全身痠痛點」的菱形愈大代表肌肉愈淺層，點它看可能的問題與轉移痛範圍。</p>`;
+    <p class="hint">關掉淺層看中層；點選肌肉可隱藏、半透明或拉出。</p>`;
   const list = el.querySelector('.hidden-list');
 
   el.addEventListener('change', e => {
@@ -43,6 +55,7 @@ export function initDissectPanel(el, ctrl, content) {
     const btn = e.target.closest('button');
     if (!btn) return;
     if (btn.dataset.pain) ctrl.setPainMode(btn.dataset.pain);
+    else if ('lookup' in btn.dataset) ctrl.setLookupMode(!ctrl.state.lookupMode);
     else if ('reset' in btn.dataset) ctrl.reset();
     else if ('restoreAll' in btn.dataset) ctrl.restoreParts();
     else if (btn.dataset.unset) ctrl.toggle(btn.dataset.unset, btn.dataset.key);
@@ -59,6 +72,14 @@ export function initDissectPanel(el, ctrl, content) {
     for (const [k] of TOGGLES) el.querySelector(`[data-layer="${k}"]`).checked = ctrl.state.layers[k];
     el.querySelector('[data-explode]').value = ctrl.state.explode;
     el.querySelector('[data-overlay]').checked = ctrl.state.overlay;
+    el.querySelector('.pain-hint-line').textContent = painHint(ctrl.state.painMode, ctrl.poseActive, ctrl.visiblePainCount());
+    const on = ctrl.state.lookupMode;
+    const lookupBtn = el.querySelector('[data-lookup]');
+    lookupBtn.textContent = on ? '✓ 找痛源中（點一下結束）' : '找痛源：我哪裡痛？';
+    lookupBtn.classList.toggle('active', on);
+    el.querySelector('.lookup-hint-line').textContent = on
+      ? '在模型上點會痛的位置，右側就列出轉移痛會到那裡的肌肉。'
+      : '知道哪裡痛、但不知道是哪條肌肉時，用這個反查。';
     for (const b of el.querySelectorAll('[data-pain]')) b.classList.toggle('active', b.dataset.pain === ctrl.state.painMode);
     const { hidden, ghost } = ctrl.state;
     list.innerHTML =
