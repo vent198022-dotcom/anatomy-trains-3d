@@ -101,6 +101,8 @@ export function initPostureBar(el, ctrl, content, onToggle) {
     for (const b of el.querySelectorAll('[data-preset]')) b.classList.toggle('active', b.dataset.preset === active);
     for (const b of el.querySelectorAll('[data-mode]')) b.classList.toggle('active', b.dataset.mode === mode);
     el.querySelector('.posture-note').textContent = active ? content.postures[active] : '自訂姿勢：拖動滑桿調整各關節；上肢、下肢可切換「兩側一起」或只調左側、右側。';
+    const label = active && active !== 'neutral' ? PRESETS[active].label : null;
+    if (ctrl.postureLabel !== label) ctrl.setPostureLabel(label);
   }
   ctrl.onChange(sync);
   sync();

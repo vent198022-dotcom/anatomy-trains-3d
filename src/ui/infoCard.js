@@ -6,8 +6,19 @@ import { LINES } from '../trains/lines.js';
 import { meridianById } from '../meridians/meridians.js';
 import { DEPTHS, DEPTH_TEXT } from '../pain/zones.js';
 import { STATE_TEXT as LOCK_TEXT } from '../muscles/colors.js';
+import { patientBlocks, clinicBlocks } from '../pain/analysis.js';
 
 const SIDE_TEXT = { l: '左側', r: '右側', m: '中線' };
+const VIEW_KEY = 'anatomyTrains3d.painView'; // 病人版／臨床版（記在這台瀏覽器）
+let view = (() => {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'clinic' ? 'clinic' : 'patient';
+  } catch {
+    return 'patient';
+  }
+})();
+
+const LAYER_SHORT = { superficial: '淺層', middle: '中層', deep: '深層' };
 const LAYER_TEXT = { superficial: '淺層', middle: '中層（關掉淺層才看得到）', deep: '深層（關掉淺層、中層才看得到）' };
 const SHORT_SIDE = { l: '左', r: '右', m: '' };
 
@@ -27,6 +38,15 @@ export function initInfoCard(el, ctrl, content) {
     if (btn.dataset.act && ctrl.state.selectedKey) ctrl.toggle(btn.dataset.act, ctrl.state.selectedKey);
     else if (btn.dataset.muscle) ctrl.focus(btn.dataset.muscle);
     else if ('postureZones' in btn.dataset) ctrl.setPostureZones(!ctrl.state.postureZones);
+    else if (btn.dataset.view) {
+      view = btn.dataset.view;
+      try {
+        localStorage.setItem(VIEW_KEY, view);
+      } catch {
+        // 存不了就只在這一次有效
+      }
+      render();
+    }
     else if (btn.dataset.meridian) ctrl.toggleMeridian(btn.dataset.meridian);
   });
   ctrl.onChange(render);
@@ -46,38 +66,17 @@ function acupointCard({ meridian, side, point }, content) {
     <p class="hint">穴位座標是依模型骨架估算的教學示意，實際取穴請依標準定位與體表標誌。</p>`;
 }
 
-// 西醫的看法：肌筋膜激痛點；這條肌肉自己的臨床樣貌寫在 problems 與 referredPain
-function westView(content, c, problem) {
+// 名詞說明：激痛點、阿是穴、經筋這些共通觀念講一次就好，收在摺疊區裡
+function glossary(content) {
   const w = content.west;
+  const t = content.tcm;
   return `
-    <details class="view west">
-      <summary>西醫觀點：肌筋膜激痛點</summary>
+    <details class="view">
+      <summary>名詞說明（激痛點、阿是穴、經筋）</summary>
       <p>${w.term}</p>
       <p>${w.how}</p>
-      <p><b>這一點：</b>${problem}</p>
-      <p><b>常見處置：</b>${w.do}</p>
-      <p class="red-flag"><b>什麼時候要就醫：</b>${w.red}</p>
-    </details>`;
-}
-
-// 中醫的看法：阿是穴、經筋，加上算出來的鄰近穴位與該經的遠端要穴
-function tcmView(content, near, acupoints) {
-  const t = content.tcm;
-  const local = acupoints.length
-    ? acupoints.map(a => `${a.point.name}（${a.point.code}，約 ${a.distance.toFixed(1)} 公分）`).join('、')
-    : '附近 6 公分內沒有本模型收錄的經穴，可直接取阿是穴';
-  const distal = near.length
-    ? near.map(n => `<b>${n.meridian.short}</b>：${content.meridianPoints[n.meridian.id] ?? '—'}`).join('<br>')
-    : '附近沒有經過的經脈，以局部阿是穴為主';
-  return `
-    <details class="view tcm">
-      <summary>中醫觀點：經筋與阿是穴</summary>
       <p>${t.ashi}</p>
       <p>${t.jingjin}</p>
-      <p><b>近取（這一點附近的經穴）：</b>${local}</p>
-      <p><b>遠取（同一條經脈的要穴）：</b><br>${distal}</p>
-      <p>${t.how}</p>
-      <p>${t.pattern}</p>
       <p class="notes">${t.note}</p>
     </details>`;
 }
@@ -110,48 +109,66 @@ function lookupCard(ctrl, content) {
     <p class="hint">同一個地方痛可能有好幾個來源，要靠按壓能不能重現你平常的痛來分辨。這是整理出來的常見關聯，不能取代專業評估。</p>`;
 }
 
+// 痠痛點的說明卡：同一組事實組出「病人版」與「臨床版」，上面可以切換
 function painCard(ctrl, content) {
   const { key, index } = ctrl.state.selectedPain;
   const part = ctrl.partByKey(key);
   if (!part) return '<p class="hint">找不到這個痠痛點。</p>';
   const c = content.muscles[part.info.id];
   const s = lengthState(part.delta);
-  const posture =
-    ctrl.poseActive && part.info.measure
-      ? `<p class="delta ${s}">目前姿勢下這條肌肉 ${deltaText(part.delta)}　${STATE_TEXT[s]}</p>${s === 'same' ? '' : `<p class="pain-hint ${s}">${content.painHints[s]}</p>`}`
-      : '';
   const position = ctrl.painPosition(key, index);
   const near = position ? ctrl.nearbyMeridians(position) : [];
   const acupoints = position ? ctrl.nearbyAcupoints(position) : [];
-  const nearText = near.length
-    ? near.map(n => `<button type="button" class="link" data-meridian="${n.meridian.id}">${n.meridian.short}</button>`).join('、')
-    : '附近沒有經過的經脈';
-  // 轉移痛不分肌肉層次（它不在任何一條肌肉上），改依「痛感覺起來有多深」分組
-  const picked = ctrl.referredZonesOfSelection();
-  const zoneText = DEPTHS.map(d => [d, [...new Set(picked.filter(z => z.depth === d).map(z => z.label))]])
-    .filter(([, labels]) => labels.length)
-    .map(([d, labels]) => `<b class="depth ${d}">${DEPTH_TEXT[d]}</b>${labels.join('、')}`)
-    .join('<br>');
+  const zones = ctrl.referredZonesOfSelection();
+  const careIds = content.careFor[part.info.id] ?? { release: [], strengthen: [] };
+  const care = {
+    release: (careIds.release ?? []).map(a => content.selfCare[a]).filter(Boolean),
+    strengthen: (careIds.strengthen ?? []).map(a => content.selfCare[a]).filter(Boolean),
+  };
+  const facts = {
+    name: c.name,
+    layer: part.info.layer,
+    layerText: LAYER_SHORT[part.info.layer],
+    delta: part.delta,
+    deltaText: deltaText(part.delta),
+    lock: ctrl.poseActive && part.info.measure && s !== 'same' ? s : null,
+    postureLabel: ctrl.postureLabel,
+    worstPostures: ctrl.posturesFor(key),
+    antagonists: ctrl.antagonistsOf(key).map(a => ({ name: content.muscles[a.id].name, deltaText: a.deltaText })),
+    zones,
+    alsoHere: ctrl.alsoHere(part.info.id).map(x => ({ name: content.muscles[x.id].name })),
+    lineMates: ctrl.lineMatesOf(part.info.id).map(id => content.muscles[id].name),
+    lines: c.lines.join('、'),
+    meridians: near.map(n => ({ short: n.meridian.short, id: n.meridian.id })),
+    acupoints: acupoints.map(a => ({ name: a.point.name, code: a.point.code })),
+    distal: near.map(n => content.meridianPoints[n.meridian.id]).filter(Boolean)[0] ?? null,
+    painPoints: c.painPoints,
+    referredPain: c.referredPain,
+    problems: content.problems[part.info.id] ?? '',
+    lockedShort: c.lockedShort,
+    lockedLong: c.lockedLong,
+    care,
+  };
+  if (!facts.lines) facts.lineMates = [];
+
+  const blocks = view === 'patient' ? patientBlocks(facts) : clinicBlocks(facts);
   const total = part.tps.length;
+  const zoneNote = zones.length
+    ? `<p class="hint">模型上已把轉移痛範圍染出來（黃＝表淺、橙＝肌肉層、洋紅＝深處）。</p>`
+    : '';
   return `
     <h2>痠痛點<span class="side">${c.name}　${SIDE_TEXT[part.info.side]}${total > 1 ? `　第 ${index + 1} 點` : ''}</span></h2>
-    <p class="en">${c.en}</p>
-    ${posture}
-    <dl>
-      <dt>所在層次</dt><dd>${LAYER_TEXT[part.info.layer]}</dd>
-      <dt>可能的問題</dt><dd>${content.problems[part.info.id] ?? '—'}</dd>
-      <dt>痠痛位置</dt><dd>${c.painPoints}</dd>
-      <dt>轉移痛</dt><dd>${c.referredPain}</dd>
-      <dt>標示範圍</dt><dd>${picked.length ? `${zoneText}<span class="zone-note">模型上會把這些區域的肌肉染色（染不到的地方才用半透明的球罩出來）。顏色愈濃表示痛得愈深——這是痛感覺起來的深度，不是肌肉的層次。</span>` : '沒有典型的轉移痛範圍'}</dd>
-      <dt>常見鎖短</dt><dd>${c.lockedShort}</dd>
-      <dt>常見鎖長</dt><dd>${c.lockedLong}</dd>
-      <dt>列車線</dt><dd>${c.lines.length ? c.lines.join('、') : '—'}</dd>
-      <dt>鄰近經脈</dt><dd>${nearText}</dd>
-    </dl>
-    ${westView(content, c, content.problems[part.info.id] ?? '—')}
-    ${tcmView(content, near, acupoints)}
+    <div class="view-switch">
+      <button type="button" data-view="patient" class="${view === 'patient' ? 'active' : ''}">病人版</button>
+      <button type="button" data-view="clinic" class="${view === 'clinic' ? 'active' : ''}">臨床版</button>
+    </div>
+    ${blocks.map(b => `<h3 class="block">${b.title}</h3><p>${b.body}</p>`).join('')}
+    ${zoneNote}
+    ${glossary(content)}
     <div class="actions"><button type="button" data-muscle="${key}">看這條肌肉的完整說明</button></div>
-    <p class="hint">痠痛點與轉移痛是常見位置的整理，不能取代專業評估；痛的地方不一定是問題的根源。</p>`;
+    <p class="hint">${view === 'patient'
+      ? '以上是常見關聯的整理，不是診斷。動作做了會更痛就停下來，有上面提到的情況請就醫。'
+      : '痠痛點與轉移痛是常見位置的整理，不能取代臨床評估；自我照顧的動作尚待治療師審閱。'}</p>`;
 }
 
 function muscleCard(ctrl, content) {

@@ -138,6 +138,12 @@ dl { display: grid; grid-template-columns: 5.6em 1fr; gap: 4px 8px; margin: 0; }
 button.link { padding: 0 4px; border: 0; color: var(--acu); text-decoration: underline; }
 dt { color: var(--muted); }
 dd { margin: 0; }
+/* 病人版／臨床版切換，以及分析的小標題 */
+.view-switch { display: flex; gap: 4px; margin: 0 0 10px; }
+.view-switch button { flex: 1; padding: 3px 8px; font-size: 13px; }
+h3.block { margin: 12px 0 2px; font-size: 14px; font-weight: 600; color: var(--accent); }
+h3.block + p { margin: 0; }
+
 /* 找痛源的開關與結果清單 */
 .lookup-toggle { width: 100%; margin: 4px 0 2px; padding: 4px 8px; font-size: 13px; border-color: var(--referred); color: var(--referred); }
 .lookup-toggle.active { background: var(--referred); border-color: var(--referred); color: #2a0b16; }

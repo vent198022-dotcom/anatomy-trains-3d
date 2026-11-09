@@ -13,7 +13,10 @@ import { densify, distanceToPath } from '../meridians/path.js';
 import { referredZones } from '../pain/zones.js';
 import { createReferredZones, ZONE_COLORS } from '../pain/referredRender.js';
 import { restBounds, zoneWeights, dominantZone } from '../pain/paint.js';
-import { allZones, sourcesAt } from '../pain/lookup.js';
+import { allZones, sourcesAt, MUSCLES_BY_ZONE } from '../pain/lookup.js';
+import { REFERRED } from '../pain/zones.js';
+import { PRESETS } from '../rig/presets.js';
+import { LINES } from '../trains/lines.js';
 
 // 痠痛點的顏色：刻意和經脈穴位（各自的經脈色，見 meridians.js）分開——痠痛點用洋紅、純紅、純藍、亮黃，
 // 而且是比較大的八面體；穴位是比較小的球，色系偏柔和，兩者一起顯示時不會混淆
@@ -25,6 +28,7 @@ const SELECTED_EMISSIVE = [0.12, 0.05, 0.2]; // 選取的肌肉稍微自發光�
 const NEARBY_MERIDIAN = 7; // 痠痛點與經脈相距幾公分以內算「鄰近」（深層肌肉離體表的經脈比較遠，所以放寬一些）
 const NEARBY_ACUPOINT = 6; // 痠痛點與穴位相距幾公分以內算「附近的穴位」
 const POSTURE_LIMIT = 10; // 姿勢總結列出幾條肌肉
+const deltaPct = d => `${d > 0 ? '+' : '−'}${Math.round(Math.abs(d) * 100)}%`;
 
 export function createController(viewer, model) {
   const state = createDisplayState();
@@ -36,6 +40,7 @@ export function createController(viewer, model) {
   let activeLines = []; // 目前顯示的列車線（可複選，依點選順序）
   let net = null; // 目前列車線的筋膜網
   let activeMeridians = []; // 目前顯示的經脈（可複選）
+  let postureLabel = null; // 目前的預設姿勢名稱（自訂姿勢時為 null）
 
   const meridians = createMeridians();
   viewer.scene.add(meridians.group);
@@ -167,6 +172,27 @@ export function createController(viewer, model) {
     showNet(lineIds);
     applyDisplay();
     emit();
+  }
+
+  // 每條肌肉在各個預設姿勢下的長度變化；用來回答「這條肌肉在哪些姿勢最吃虧」
+  let postureTable = null;
+  function crossPostures() {
+    if (postureTable) return postureTable;
+    postureTable = new Map(); // 部件 key → [{ label, delta, state }]
+    for (const [name, preset] of Object.entries(PRESETS)) {
+      if (name === 'neutral') continue;
+      const m = computePose(model.joints, preset.params);
+      for (const p of model.parts) {
+        if (!p.info.measure) continue;
+        const delta = lengthDelta(p.info, m);
+        const lock = lengthState(delta);
+        if (lock === 'same') continue;
+        if (!postureTable.has(p.info.key)) postureTable.set(p.info.key, []);
+        postureTable.get(p.info.key).push({ label: preset.label, delta, state: lock, deltaText: deltaPct(delta) });
+      }
+    }
+    for (const rows of postureTable.values()) rows.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+    return postureTable;
   }
 
   // 所有轉移痛區域換算到目前姿勢；反查痛源用，姿勢改變才重算
@@ -354,6 +380,47 @@ export function createController(viewer, model) {
     nearbyMeridians,
     nearbyAcupoints,
     postureMuscles,
+    // 這條肌肉在哪些預設姿勢下最吃虧
+    posturesFor(key, limit = 3) {
+      return (crossPostures().get(key) ?? []).slice(0, limit);
+    },
+    // 目前姿勢下方向相反的肌肉（鎖短對鎖長），用來講「先鬆哪邊再練哪邊」
+    antagonistsOf(key, limit = 2) {
+      const self = byKey.get(key);
+      if (!self || !poseActive()) return [];
+      const want = lengthState(self.delta) === 'short' ? 'long' : 'short';
+      return postureMuscles(POSTURE_LIMIT)
+        .filter(r => r.state === want && r.key !== key)
+        .slice(0, limit)
+        .map(r => ({ id: r.id, key: r.key, delta: r.delta, deltaText: deltaPct(r.delta) }));
+    },
+    // 轉移痛區域和這條肌肉重疊的其他肌肉（鑑別用）：共用的區域愈多排愈前面
+    alsoHere(muscleId, limit = 5) {
+      const mine = REFERRED[muscleId] ?? [];
+      const score = new Map();
+      for (const z of mine) for (const other of MUSCLES_BY_ZONE[z] ?? []) {
+        if (other !== muscleId) score.set(other, (score.get(other) ?? 0) + 1);
+      }
+      return [...score.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([id, shared]) => ({ id, shared }));
+    },
+    // 同一條列車線上的其他肌肉
+    lineMatesOf(muscleId, limit = 6) {
+      const out = new Set();
+      for (const line of LINES) {
+        const ids = line.stations.flatMap(s => s.ids);
+        if (!ids.includes(muscleId)) continue;
+        for (const id of ids) if (id !== muscleId) out.add(id);
+      }
+      return [...out].slice(0, limit);
+    },
+    // 目前選的預設姿勢名稱（由下方姿勢列告訴它，說明卡才能說「在『圓肩』這個姿勢下」）
+    get postureLabel() {
+      return postureLabel;
+    },
+    setPostureLabel(label) {
+      postureLabel = label;
+      emit();
+    },
     // 在模型上點一個會痛的位置，反查轉移痛會到那裡的肌肉
     lookupAt(position) {
       const sources = position ? sourcesAt(position, posedZones()) : [];
