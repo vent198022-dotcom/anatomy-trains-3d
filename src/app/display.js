@@ -23,6 +23,11 @@ export function createDisplayState() {
     lookupMode: false, // 「找痛源」：點模型上會痛的地方，反查可能的來源肌肉
     lookup: null, // 反查結果 { position, sources }
     postureZones: false, // 把目前姿勢所有鎖短／鎖長肌肉的轉移痛疊起來標示
+    boneOpacity: 1, // 骨骼的不透明度：調低就能隔著骨頭看深層肌肉
+    clipAxis: null, // 裁切平面：null 不裁、'x' 矢狀面、'y' 水平面、'z' 冠狀面
+    clipAt: 0.5, // 裁在那個軸上的哪個位置（0–1）
+    clipFlip: false, // 保留哪一半
+    compensation: false, // 代償連線：把這個姿勢的鎖短與鎖長肌肉連起來
   };
 }
 

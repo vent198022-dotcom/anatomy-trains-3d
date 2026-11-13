@@ -14,6 +14,8 @@ import { referredZones } from '../pain/zones.js';
 import { createReferredZones, ZONE_COLORS } from '../pain/referredRender.js';
 import { restBounds, zoneWeights, dominantZone } from '../pain/paint.js';
 import { allZones, sourcesAt, MUSCLES_BY_ZONE } from '../pain/lookup.js';
+import { createCompensation } from './compensation.js';
+import { partPath } from '../muscles/length.js';
 import { REFERRED } from '../pain/zones.js';
 import { PRESETS } from '../rig/presets.js';
 import { LINES } from '../trains/lines.js';
@@ -46,7 +48,81 @@ export function createController(viewer, model) {
   viewer.scene.add(meridians.group);
   const referred = createReferredZones();
   viewer.scene.add(referred.group);
-  viewer.onResize((w, h) => meridians.setResolution(w, h));
+  const compensation = createCompensation();
+  viewer.scene.add(compensation.group);
+  viewer.onResize((w, h) => {
+    meridians.setResolution(w, h);
+    compensation.setResolution(w, h);
+  });
+
+  // 裁切平面：只裁骨頭與肌肉，痠痛點、穴位、經脈不裁，不然標記會跟著消失
+  const clipPlane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0);
+  const clipTargets = () => [model.boneMaterial, ...model.partMaterials];
+  function applyClip() {
+    const axis = state.clipAxis;
+    viewer.renderer.localClippingEnabled = Boolean(axis);
+    if (axis) {
+      const i = { x: 0, y: 1, z: 2 }[axis];
+      const lo = model.bounds.min[i];
+      const hi = model.bounds.max[i];
+      const at = lo + (hi - lo) * state.clipAt;
+      const dir = state.clipFlip ? -1 : 1;
+      clipPlane.normal.set(axis === 'x' ? dir : 0, axis === 'y' ? dir : 0, axis === 'z' ? dir : 0);
+      clipPlane.constant = -at * dir;
+    }
+    for (const m of clipTargets()) {
+      m.clippingPlanes = axis ? [clipPlane] : null;
+      m.clipShadows = false;
+      m.side = axis ? THREE.DoubleSide : THREE.FrontSide; // 切開之後看得到內面
+      m.needsUpdate = true;
+    }
+  }
+
+  // 骨骼透明度：調低就能隔著骨頭看到深層肌肉
+  function applyBoneOpacity() {
+    const m = model.boneMaterial;
+    const o = state.boneOpacity;
+    m.opacity = o;
+    m.transparent = o < 1;
+    m.depthWrite = o >= 1;
+    m.needsUpdate = true;
+  }
+
+  // 代償連線：這個姿勢鎖短的肌肉連到被它拉長的肌肉
+  function muscleMidpoint(part) {
+    const pts = partPath(part.info, mats);
+    const a = pts[0];
+    const b = pts[pts.length - 1];
+    const o = part.mesh.position;
+    return [(a[0] + b[0]) / 2 + o.x, (a[1] + b[1]) / 2 + o.y, (a[2] + b[2]) / 2 + o.z];
+  }
+
+  function applyCompensation() {
+    if (!state.compensation || !poseActive()) {
+      compensation.setPairs([]);
+      return;
+    }
+    const rows = postureMuscles(POSTURE_LIMIT);
+    const shorts = rows.filter(r => r.state === 'short').slice(0, 3);
+    const longs = rows.filter(r => r.state === 'long');
+    const used = new Set();
+    const pairs = [];
+    for (const s of shorts) {
+      const from = muscleMidpoint(byKey.get(s.key));
+      // 配給離它最近、還沒被配走的鎖長肌肉：圓肩時胸小肌會連到背後的菱形肌
+      let best = null;
+      for (const l of longs) {
+        if (used.has(l.key)) continue;
+        const to = muscleMidpoint(byKey.get(l.key));
+        const d = Math.hypot(from[0] - to[0], from[1] - to[1], from[2] - to[2]);
+        if (!best || d < best.d) best = { d, key: l.key, to };
+      }
+      if (!best) break;
+      used.add(best.key);
+      pairs.push({ from, to: best.to });
+    }
+    compensation.setPairs(pairs);
+  }
 
   const poseActive = () => !isNeutral(params);
   const emit = () => listeners.forEach(fn => fn());
@@ -87,6 +163,7 @@ export function createController(viewer, model) {
     updateNet();
     meridians.update(mats);
     referred.update(mats);
+    applyCompensation();
   }
 
   function applyColors() {
@@ -119,35 +196,54 @@ export function createController(viewer, model) {
     updateNet();
   }
 
-  // 痠痛點的顯示與顏色；位置在每一幀更新（跟著肌肉的拆解位移）
+  // 痠痛點用一個 InstancedMesh 畫。要顯示的點壓到實例陣列的前面，再把 count 設成那個數字，
+  // 看不到的點就完全不進管線。shown[i] 是第 i 個實例對應 model.painPoints 的哪一筆（點選時要用）。
+  const shown = [];
+  const markerScale = []; // 每個實例的大小（層次愈深愈小，選到的放大）
+  const markerMatrix = new THREE.Matrix4();
+  const markerColor = new THREE.Color();
+
+  // 哪些痠痛點要顯示、什麼顏色、多大；位置在每一幀更新（跟著肌肉的拆解位移）
   function applyMarkers() {
-    for (const p of model.parts) {
-      const kind = painMarkerState(p.info, state, poseActive(), p.delta);
-      for (let i = 0; i < p.tps.length; i++) {
-        const { marker } = p.tps[i];
-        marker.visible = Boolean(kind);
-        marker.material.depthTest = !state.overlay;
-        const chosen = state.selectedPain && state.selectedPain.key === p.info.key && state.selectedPain.index === i;
-        if (kind) marker.material.color.setRGB(...(chosen ? MARKER_COLORS.focus : MARKER_COLORS[kind]), THREE.SRGBColorSpace);
-        marker.scale.setScalar(LAYER_SCALE[p.info.layer] * (chosen ? 1.8 : 1));
-      }
+    const marks = model.painMarkers;
+    marks.material.depthTest = !state.overlay;
+    shown.length = 0;
+    markerScale.length = 0;
+    for (let slot = 0; slot < model.painPoints.length; slot++) {
+      const { part, key, index } = model.painPoints[slot];
+      const kind = painMarkerState(part.info, state, poseActive(), part.delta);
+      if (!kind) continue;
+      const chosen = state.selectedPain && state.selectedPain.key === key && state.selectedPain.index === index;
+      const i = shown.length;
+      shown.push(slot);
+      markerScale.push(LAYER_SCALE[part.info.layer] * (chosen ? 1.8 : 1));
+      markerColor.setRGB(...(chosen ? MARKER_COLORS.focus : MARKER_COLORS[kind]), THREE.SRGBColorSpace);
+      marks.setColorAt(i, markerColor);
     }
+    marks.count = shown.length;
+    marks.visible = shown.length > 0;
+    if (marks.instanceColor) marks.instanceColor.needsUpdate = true;
+    placeMarkers();
   }
 
   function placeMarkers() {
-    for (const p of model.parts) {
-      if (!p.tps.length || !p.tps[0].marker.visible) continue;
-      const pos = p.mesh.geometry.getAttribute('position').array;
-      const nor = p.mesh.geometry.getAttribute('normal').array;
-      const o = p.mesh.position;
-      for (const { marker, vertex: v } of p.tps) {
-        marker.position.set(
-          pos[v * 3] + nor[v * 3] * MARKER_LIFT + o.x,
-          pos[v * 3 + 1] + nor[v * 3 + 1] * MARKER_LIFT + o.y,
-          pos[v * 3 + 2] + nor[v * 3 + 2] * MARKER_LIFT + o.z,
-        );
-      }
+    const marks = model.painMarkers;
+    if (!marks.count) return;
+    for (let i = 0; i < shown.length; i++) {
+      const { part, vertex: v } = model.painPoints[shown[i]];
+      const pos = part.mesh.geometry.getAttribute('position').array;
+      const nor = part.mesh.geometry.getAttribute('normal').array;
+      const o = part.mesh.position;
+      const s = markerScale[i];
+      markerMatrix.makeScale(s, s, s);
+      markerMatrix.setPosition(
+        pos[v * 3] + nor[v * 3] * MARKER_LIFT + o.x,
+        pos[v * 3 + 1] + nor[v * 3 + 1] * MARKER_LIFT + o.y,
+        pos[v * 3 + 2] + nor[v * 3 + 2] * MARKER_LIFT + o.z,
+      );
+      marks.setMatrixAt(i, markerMatrix);
     }
+    marks.instanceMatrix.needsUpdate = true;
   }
 
   // 筋膜網的顏色與站間細帶跟著姿勢、拆解位移更新（外殼本身掛在肌肉底下，自動跟著變形）
@@ -352,6 +448,8 @@ export function createController(viewer, model) {
   applyPose();
   finishPose();
   applyDisplay();
+  applyBoneOpacity();
+  applyClip();
 
   return {
     state,
@@ -437,6 +535,28 @@ export function createController(viewer, model) {
       if (!on) state.lookup = null;
       emit();
     },
+    setBoneOpacity(value) {
+      state.boneOpacity = value;
+      applyBoneOpacity();
+      emit();
+    },
+    // axis：null 不裁、'x' 矢狀面、'y' 水平面、'z' 冠狀面
+    setClip(axis, at = state.clipAt, flip = state.clipFlip) {
+      state.clipAxis = axis;
+      state.clipAt = at;
+      state.clipFlip = flip;
+      applyClip();
+      emit();
+    },
+    setCompensation(on) {
+      state.compensation = on;
+      applyCompensation();
+      emit();
+    },
+    // 目前畫了幾條代償連線（面板用來回報）
+    get compensationCount() {
+      return compensation.count;
+    },
     setPostureZones(on) {
       state.postureZones = on;
       applyReferred();
@@ -444,7 +564,7 @@ export function createController(viewer, model) {
     },
     // 目前標出來的痠痛點個數（面板用來回報「標了幾個」）
     visiblePainCount() {
-      return model.parts.reduce((n, p) => n + p.tps.filter(t => t.marker.visible).length, 0);
+      return model.painMarkers.count;
     },
     painPosition,
     setParams(next) {
@@ -578,15 +698,21 @@ export function createController(viewer, model) {
     pickAt(x, y) {
       finishPose(); // 確保外接球是最新的
       const dots = meridians.pickTargets();
-      const markers = state.painMode === 'off' ? [] : model.parts.flatMap(p => p.tps.filter(t => t.marker.visible).map(t => t.marker));
+      const markers = model.painMarkers.count ? [model.painMarkers] : [];
       const muscles = model.parts.filter(p => p.pickable).map(p => p.mesh);
-      const hit = viewer.pickHit(x, y, [...dots, ...markers, ...muscles]);
+      // 穿透顯示時痠痛點與穴位畫在最上層，點選也要跟著：先只打這些，沒打到才算點到肌肉。
+      // 不然深層的點看得到卻點不到（射線還是取最近的，會先打到蓋在前面的肌肉）。
+      const hit = (state.overlay && viewer.pickHit(x, y, [...dots, ...markers])) || viewer.pickHit(x, y, [...dots, ...markers, ...muscles]);
       if (!hit) return { kind: null };
+      // 痠痛點與穴位都是 InstancedMesh，先分清楚點到的是哪一個
+      if (hit.object === model.painMarkers) {
+        const point = model.painPoints[shown[hit.instanceId]];
+        return point ? { kind: 'pain', pain: { key: point.key, index: point.index } } : { kind: null };
+      }
       if (hit.object.isInstancedMesh) {
         const acu = meridians.resolve(hit.object, hit.instanceId);
         return acu ? { kind: 'acupoint', hit: acu } : { kind: null };
       }
-      if (hit.object.userData.pain) return { kind: 'pain', pain: hit.object.userData.pain };
       if (hit.object.userData.partKey) return { kind: 'muscle', key: hit.object.userData.partKey };
       return { kind: null };
     },

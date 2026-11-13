@@ -96,6 +96,15 @@ button.active { background: var(--accent); border-color: var(--accent); color: #
 
 .toggle { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
 .layers { display: flex; flex-wrap: wrap; gap: 2px 12px; } /* 四個分層開關排成一列，不要把面板撐長 */
+/* 裁切平面的按鈕與位置滑桿 */
+.clip-axes { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin: 6px 0 2px; }
+.clip-axes .label { font-size: 13px; }
+.clip-axes button { padding: 1px 8px; font-size: 13px; }
+.clip-at { display: flex; align-items: center; gap: 6px; margin: 2px 0 6px; font-size: 13px; }
+.clip-at input { flex: 1; }
+.clip-at button { flex: none; padding: 1px 8px; font-size: 12px; }
+.clip-at.off { opacity: 0.4; pointer-events: none; }
+
 .pain-modes { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin: 8px 0 6px; }
 .pain-modes .label { font-size: 13px; color: var(--pain); }
 .pain-modes button { padding: 1px 8px; font-size: 13px; }

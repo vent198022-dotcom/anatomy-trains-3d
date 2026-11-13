@@ -13,7 +13,9 @@ function makeGeometry(positions, indices) {
   return geo;
 }
 
-// 痠痛點畫成八面體（菱形），和經脈穴位的小球一眼分得出來
+// 痠痛點畫成八面體（菱形），和經脈穴位的小球一眼分得出來。
+// 全部 322 個合成一個 InstancedMesh：之前每個點都是獨立的 Mesh，只佔 2600 個三角面
+// 卻多了 322 個 draw call，量起來要 2.9 毫秒。
 const MARKER_GEOMETRY = new THREE.OctahedronGeometry(0.8);
 
 // 讓材質可以被「轉移痛」染色：每個頂點多一個 0–1 的權重 aReferred，權重愈大顏色愈往 uReferredColor 混。
@@ -61,7 +63,6 @@ export function buildModel(data) {
     return { mesh, segment: b.segment };
   });
 
-  const markers = new THREE.Group();
   const parts = meta.parts.map(info => {
     const { positions, indices, skin } = decodeMesh(bytes, meta.quant, info);
     const geo = makeGeometry(positions.slice(), indices);
@@ -73,14 +74,7 @@ export function buildModel(data) {
     mesh.frustumCulled = false; // 外接球在姿勢動畫中延後更新，用舊的外接球剔除會讓肌肉暫時消失
     group.add(mesh);
     // 痠痛點：記住對應的頂點，姿勢改變後跟著頂點移動；肌肉本身拆解位移時一起移
-    const tps = info.tps.map((vertex, index) => {
-      const marker = new THREE.Mesh(MARKER_GEOMETRY, new THREE.MeshBasicMaterial());
-      marker.visible = false;
-      marker.renderOrder = 5;
-      marker.userData.pain = { key: info.key, index }; // 點選痠痛點用
-      markers.add(marker);
-      return { marker, vertex };
-    });
+    const tps = info.tps.map(vertex => ({ vertex }));
     return {
       info,
       mesh,
@@ -93,7 +87,20 @@ export function buildModel(data) {
       target: [0, 0, 0], // 拆解時要移到的位移（每一幀平滑靠近）
     };
   });
-  group.add(markers);
+  // 所有痠痛點攤平成一張表；InstancedMesh 的第 n 個實例對應 painPoints 裡的哪一個，由 controller 決定
+  const painPoints = [];
+  for (const part of parts) {
+    part.tps.forEach((tp, index) => painPoints.push({ part, vertex: tp.vertex, key: part.info.key, index }));
+  }
+  const painMarkers = new THREE.InstancedMesh(MARKER_GEOMETRY, new THREE.MeshBasicMaterial({ toneMapped: false }), Math.max(1, painPoints.length));
+  painMarkers.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(Math.max(1, painPoints.length) * 3), 3);
+  painMarkers.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  painMarkers.frustumCulled = false;
+  painMarkers.renderOrder = 5;
+  painMarkers.count = 0; // 由 controller 依目前要顯示幾個來設定
+  group.add(painMarkers);
 
-  return { group, bones, parts, boneMaterial, joints: meta.joints };
+  // partMaterials：裁切平面要逐個材質設定（只裁骨頭與肌肉，痠痛點、穴位、經脈不裁）
+  const partMaterials = parts.map(p => p.mesh.material);
+  return { group, bones, parts, boneMaterial, partMaterials, painMarkers, painPoints, bounds: meta.quant, joints: meta.joints };
 }

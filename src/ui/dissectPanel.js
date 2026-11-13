@@ -11,6 +11,14 @@ const TOGGLES = [
 ];
 
 // 'posture' 是「姿勢造成的痠痛點」：下方選了姿勢之後，被它鎖短（紅）、鎖長（藍）的肌肉才會標出來
+// 裁切平面：像斷層掃描一樣把身體切開，看深層肌肉與體腔的立體關係
+export const CLIP_AXES = [
+  [null, '不裁切'],
+  ['x', '矢狀面'],
+  ['z', '冠狀面'],
+  ['y', '水平面'],
+];
+
 export const PAIN_MODES = [
   ['off', '不顯示'],
   ['posture', '姿勢造成的'],
@@ -37,6 +45,12 @@ export function initDissectPanel(el, ctrl, content) {
     <button type="button" class="lookup-toggle" data-lookup></button>
     <p class="hint lookup-hint-line"></p>
     <label class="toggle" title="經脈與痠痛點不會被肌肉擋住，背面的也看得到"><input type="checkbox" data-overlay>穿透顯示</label>
+    <label class="slider">骨骼透明度<input type="range" min="0.1" max="1" step="0.05" value="1" data-bone-opacity></label>
+    <div class="clip-axes">
+      <span class="label">裁切</span>
+      ${CLIP_AXES.map(([k, label]) => `<button type="button" data-clip="${k ?? ''}">${label}</button>`).join('')}
+    </div>
+    <label class="slider clip-at">切在哪<input type="range" min="0" max="1" step="0.01" value="0.5" data-clip-at><button type="button" data-clip-flip>換邊</button></label>
     <label class="slider">爆炸圖<input type="range" min="0" max="1" step="0.01" value="0" data-explode></label>
     <button type="button" data-reset>復原</button>
     <div class="hidden-list"></div>
@@ -50,11 +64,15 @@ export function initDissectPanel(el, ctrl, content) {
   });
   el.addEventListener('input', e => {
     if ('explode' in e.target.dataset) ctrl.setExplode(Number(e.target.value));
+    if ('boneOpacity' in e.target.dataset) ctrl.setBoneOpacity(Number(e.target.value));
+    if ('clipAt' in e.target.dataset) ctrl.setClip(ctrl.state.clipAxis, Number(e.target.value));
   });
   el.addEventListener('click', e => {
     const btn = e.target.closest('button');
     if (!btn) return;
     if (btn.dataset.pain) ctrl.setPainMode(btn.dataset.pain);
+    else if ('clip' in btn.dataset) ctrl.setClip(btn.dataset.clip || null);
+    else if ('clipFlip' in btn.dataset) ctrl.setClip(ctrl.state.clipAxis, ctrl.state.clipAt, !ctrl.state.clipFlip);
     else if ('lookup' in btn.dataset) ctrl.setLookupMode(!ctrl.state.lookupMode);
     else if ('reset' in btn.dataset) ctrl.reset();
     else if ('restoreAll' in btn.dataset) ctrl.restoreParts();
@@ -72,6 +90,10 @@ export function initDissectPanel(el, ctrl, content) {
     for (const [k] of TOGGLES) el.querySelector(`[data-layer="${k}"]`).checked = ctrl.state.layers[k];
     el.querySelector('[data-explode]').value = ctrl.state.explode;
     el.querySelector('[data-overlay]').checked = ctrl.state.overlay;
+    el.querySelector('[data-bone-opacity]').value = ctrl.state.boneOpacity;
+    el.querySelector('[data-clip-at]').value = ctrl.state.clipAt;
+    el.querySelector('.clip-at').classList.toggle('off', !ctrl.state.clipAxis);
+    for (const b of el.querySelectorAll('[data-clip]')) b.classList.toggle('active', (b.dataset.clip || null) === ctrl.state.clipAxis);
     el.querySelector('.pain-hint-line').textContent = painHint(ctrl.state.painMode, ctrl.poseActive, ctrl.visiblePainCount());
     const on = ctrl.state.lookupMode;
     const lookupBtn = el.querySelector('[data-lookup]');

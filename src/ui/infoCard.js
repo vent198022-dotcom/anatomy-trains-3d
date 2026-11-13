@@ -38,6 +38,7 @@ export function initInfoCard(el, ctrl, content) {
     if (btn.dataset.act && ctrl.state.selectedKey) ctrl.toggle(btn.dataset.act, ctrl.state.selectedKey);
     else if (btn.dataset.muscle) ctrl.focus(btn.dataset.muscle);
     else if ('postureZones' in btn.dataset) ctrl.setPostureZones(!ctrl.state.postureZones);
+    else if ('compensation' in btn.dataset) ctrl.setCompensation(!ctrl.state.compensation);
     else if (btn.dataset.view) {
       view = btn.dataset.view;
       try {
@@ -222,12 +223,16 @@ function postureSummary(ctrl, content) {
     })
     .join('');
   const on = ctrl.state.postureZones;
+  const arc = ctrl.state.compensation;
   return `
     <h2>這個姿勢最吃虧的肌肉</h2>
     <p class="hint">依長度變化排序（紅＝鎖短、藍＝鎖長）。點名稱跳到那條肌肉。</p>
     <ol class="posture-list">${items}</ol>
-    <div class="actions"><button type="button" data-posture-zones class="${on ? 'active' : ''}">${on ? '✓ 已標出這個姿勢的痛區' : '標出這個姿勢的痛區'}</button></div>
-    <p class="hint">「痛區」把上面這些肌肉的轉移痛疊起來染在模型上，就是這個姿勢最容易感覺到痠痛的地方。</p>`;
+    <div class="actions">
+      <button type="button" data-posture-zones class="${on ? 'active' : ''}">${on ? '✓ 已標出這個姿勢的痛區' : '標出這個姿勢的痛區'}</button>
+      <button type="button" data-compensation class="${arc ? 'active' : ''}">${arc ? '✓ 已畫出代償連線' : '畫出代償連線'}</button>
+    </div>
+    <p class="hint">「痛區」把上面這些肌肉的轉移痛疊起來染在模型上，就是這個姿勢最容易感覺到痠痛的地方。「代償連線」把鎖短的肌肉（紅端）連到被它拉長的肌肉（藍端）——痛的常常是藍端，但要處理的是紅端。</p>`;
 }
 
 function overviewCard(ctrl, content) {
